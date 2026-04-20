@@ -189,10 +189,14 @@ func (h *PostHandler) CreateComment(w http.ResponseWriter, r *http.Request) {
 
 	commentID, _ := result.LastInsertId()
 
-	// Return full comment object
+	// Return full comment object with author info
 	var c models.Comment
-	h.DB.QueryRow(`SELECT id, post_id, user_id, content, image, created_at FROM comments WHERE id = ?`, commentID).
-		Scan(&c.ID, &c.PostID, &c.UserID, &c.Content, &c.Image, &c.CreatedAt)
+	h.DB.QueryRow(
+		`SELECT c.id, c.post_id, c.user_id, c.content, c.image, c.created_at,
+		        COALESCE(u.first_name,''), COALESCE(u.last_name,''), COALESCE(u.avatar,''), COALESCE(u.nickname,'')
+		 FROM comments c LEFT JOIN users u ON u.id = c.user_id WHERE c.id = ?`, commentID,
+	).Scan(&c.ID, &c.PostID, &c.UserID, &c.Content, &c.Image, &c.CreatedAt,
+		&c.AuthorFirstName, &c.AuthorLastName, &c.AuthorAvatar, &c.AuthorNickname)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
@@ -204,7 +208,10 @@ func (h *PostHandler) ListComments(w http.ResponseWriter, r *http.Request) {
 	postID, _ := strconv.ParseInt(r.URL.Query().Get("post_id"), 10, 64)
 
 	rows, err := h.DB.Query(
-		`SELECT id, post_id, user_id, content, image, created_at FROM comments WHERE post_id = ? ORDER BY created_at ASC`, postID,
+		`SELECT c.id, c.post_id, c.user_id, c.content, c.image, c.created_at,
+		        COALESCE(u.first_name,''), COALESCE(u.last_name,''), COALESCE(u.avatar,''), COALESCE(u.nickname,'')
+		 FROM comments c LEFT JOIN users u ON u.id = c.user_id
+		 WHERE c.post_id = ? ORDER BY c.created_at ASC`, postID,
 	)
 	if err != nil {
 		http.Error(w, "internal server error", http.StatusInternalServerError)
@@ -215,7 +222,8 @@ func (h *PostHandler) ListComments(w http.ResponseWriter, r *http.Request) {
 	var comments []models.Comment
 	for rows.Next() {
 		var c models.Comment
-		rows.Scan(&c.ID, &c.PostID, &c.UserID, &c.Content, &c.Image, &c.CreatedAt)
+		rows.Scan(&c.ID, &c.PostID, &c.UserID, &c.Content, &c.Image, &c.CreatedAt,
+			&c.AuthorFirstName, &c.AuthorLastName, &c.AuthorAvatar, &c.AuthorNickname)
 		comments = append(comments, c)
 	}
 

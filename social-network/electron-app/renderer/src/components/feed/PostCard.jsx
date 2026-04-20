@@ -116,7 +116,13 @@ export default function PostCard({ post, onDelete }) {
       {showComments && (
         <div className="comments-sec">
           {(comments || []).map(c => {
-            const cu = users.find(u => u.id === c.user_id) || { id: c.user_id }
+            const cu = users.find(u => u.id === c.user_id) || {
+              id: c.user_id,
+              first_name: c.author_first_name,
+              last_name: c.author_last_name,
+              avatar: c.author_avatar,
+              nickname: c.author_nickname,
+            }
             return (
               <div key={c.id} className="comment">
                 <Avatar user={cu} size={28} />
