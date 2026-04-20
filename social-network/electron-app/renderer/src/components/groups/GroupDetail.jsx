@@ -15,23 +15,24 @@ export default function GroupDetail({ group, onBack }) {
   const [ev, setEv] = useState({ title: '', description: '', event_time: '' })
 
   useEffect(() => {
-    apiFetch(tok, `/api/groups/${group.id}/posts`).then(d => setPosts(d || [])).catch(() => {})
-    apiFetch(tok, `/api/groups/${group.id}/members`).then(d => {
+    apiFetch(tok, `/api/posts?group_id=${group.id}`).then(d => setPosts(d || [])).catch(() => {})
+    apiFetch(tok, `/api/groups/members?group_id=${group.id}`).then(d => {
       const ms = d || []
       setMembers(ms)
       setIsMember(ms.some(m => m.id === me?.id))
     }).catch(() => {})
-    apiFetch(tok, `/api/groups/${group.id}/events`).then(d => setEvents(d || [])).catch(() => {})
+    apiFetch(tok, `/api/groups/events?group_id=${group.id}`).then(d => setEvents(d || [])).catch(() => {})
   }, [group.id])
 
   async function joinOrLeave() {
     try {
       if (isMember) {
-        await apiFetch(tok, `/api/groups/${group.id}/leave`, { method: 'POST' })
+        // leave = delete own membership via respond with accept:false as creator, or just local state
+        await apiFetch(tok, '/api/groups/respond', { method: 'POST', body: JSON.stringify({ group_id: group.id, user_id: me.id, accept: false }) })
         setIsMember(false)
         setMembers(m => m.filter(u => u.id !== me.id))
       } else {
-        await apiFetch(tok, `/api/groups/${group.id}/join`, { method: 'POST' })
+        await apiFetch(tok, '/api/groups/join', { method: 'POST', body: JSON.stringify({ group_id: group.id }) })
         setIsMember(true)
       }
     } catch (_) {}
@@ -40,8 +41,8 @@ export default function GroupDetail({ group, onBack }) {
   async function createEvent(e) {
     e.preventDefault()
     try {
-      const evt = await apiFetch(tok, `/api/groups/${group.id}/events`, {
-        method: 'POST', body: JSON.stringify(ev),
+      const evt = await apiFetch(tok, '/api/groups/events', {
+        method: 'POST', body: JSON.stringify({ ...ev, group_id: group.id }),
       })
       setEvents(prev => [evt, ...prev])
       setShowEvent(false)
@@ -51,8 +52,8 @@ export default function GroupDetail({ group, onBack }) {
 
   async function rsvp(eventId, status) {
     try {
-      await apiFetch(tok, `/api/groups/${group.id}/events/${eventId}/rsvp`, {
-        method: 'POST', body: JSON.stringify({ status }),
+      await apiFetch(tok, '/api/groups/events/respond', {
+        method: 'POST', body: JSON.stringify({ event_id: eventId, response: status }),
       })
     } catch (_) {}
   }

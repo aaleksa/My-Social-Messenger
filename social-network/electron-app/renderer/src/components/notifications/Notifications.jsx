@@ -21,15 +21,19 @@ export default function Notifications() {
 
   async function markRead(id) {
     try {
-      await apiFetch(tok, `/api/notifications/${id}/read`, { method: 'POST' })
+      await apiFetch(tok, '/api/notifications', { method: 'PUT', body: JSON.stringify({ id }) })
       setNotifs(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n))
     } catch (_) {}
   }
 
-  async function respond(id, action) {
+  async function respond(notif, action) {
     try {
-      await apiFetch(tok, `/api/notifications/${id}/${action}`, { method: 'POST' })
-      setNotifs(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n))
+      await apiFetch(tok, '/api/follow/respond', {
+        method: 'POST',
+        body: JSON.stringify({ follower_id: notif.actor_id, accept: action === 'accept' }),
+      })
+      await apiFetch(tok, '/api/notifications', { method: 'PUT', body: JSON.stringify({ id: notif.id }) })
+      setNotifs(prev => prev.map(n => n.id === notif.id ? { ...n, is_read: true } : n))
     } catch (_) {}
   }
 
@@ -48,8 +52,8 @@ export default function Notifications() {
             <div className="notif-time">{fmtD(n.created_at)}</div>
             {(n.type === 'follow_request') && !n.is_read && (
               <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                <button className="btn btn-primary btn-sm" onClick={e => { e.stopPropagation(); respond(n.id, 'accept') }}>Accept</button>
-                <button className="btn btn-secondary btn-sm" onClick={e => { e.stopPropagation(); respond(n.id, 'decline') }}>Decline</button>
+                <button className="btn btn-primary btn-sm" onClick={e => { e.stopPropagation(); respond(n, 'accept') }}>Accept</button>
+                <button className="btn btn-secondary btn-sm" onClick={e => { e.stopPropagation(); respond(n, 'decline') }}>Decline</button>
               </div>
             )}
           </div>

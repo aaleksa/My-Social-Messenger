@@ -14,7 +14,7 @@ export default function ChatWindow() {
   useEffect(() => {
     if (!activeChatID) return
     if (cachedMsgs[activeChatID]) return
-    apiFetch(tok, `/api/messages/${activeChatID}`)
+    apiFetch(tok, `/api/messages?recipient_id=${activeChatID}`)
       .then(data => setCachedMsgs(activeChatID, data || []))
       .catch(() => {})
   }, [activeChatID])

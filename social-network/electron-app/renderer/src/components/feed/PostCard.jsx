@@ -15,7 +15,7 @@ export default function PostCard({ post, onDelete }) {
   async function loadComments() {
     if (comments !== null) { setShowComments(v => !v); return }
     try {
-      const data = await apiFetch(tok, `/api/posts/${post.id}/comments`)
+      const data = await apiFetch(tok, `/api/posts/comment?post_id=${post.id}`)
       setComments(data || [])
       setShowComments(true)
     } catch (_) {}
@@ -25,9 +25,9 @@ export default function PostCard({ post, onDelete }) {
     e.preventDefault()
     if (!cin.trim()) return
     try {
-      const c = await apiFetch(tok, `/api/posts/${post.id}/comments`, {
+      const c = await apiFetch(tok, '/api/posts/comment', {
         method: 'POST',
-        body: JSON.stringify({ content: cin }),
+        body: JSON.stringify({ post_id: post.id, content: cin }),
       })
       setComments(prev => [...(prev || []), c])
       setCin('')

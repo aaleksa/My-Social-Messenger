@@ -18,8 +18,8 @@ export default function Profile() {
   useEffect(() => {
     if (!me) return
     apiFetch(tok, `/api/posts?user_id=${me.id}`).then(d => setPosts(d || [])).catch(() => {})
-    apiFetch(tok, `/api/followers/${me.id}`).then(d => setFollowers(d?.followers || [])).catch(() => {})
-    apiFetch(tok, `/api/following/${me.id}`).then(d => setFollowing(d?.following || [])).catch(() => {})
+    apiFetch(tok, `/api/follow?user_id=${me.id}`).then(d => setFollowers(d?.followers || [])).catch(() => {})
+    apiFetch(tok, `/api/follow/following?user_id=${me.id}`).then(d => setFollowing(d?.following || [])).catch(() => {})
     setForm({
       first_name: me.first_name || '',
       last_name: me.last_name || '',
