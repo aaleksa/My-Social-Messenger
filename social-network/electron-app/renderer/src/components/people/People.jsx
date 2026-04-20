@@ -4,15 +4,12 @@ import { apiFetch, dname, avSrc, inits } from '../../lib/api'
 import Avatar from '../ui/Avatar'
 
 export default function People() {
-  const { tok, me, users, setUsers, setPage, searchQuery, setSearchQuery } = useStore()
-  const [search, setSearch] = useState(searchQuery || '')
+  const { tok, me, users, setUsers, setPage, searchQuery } = useStore()
   const [followStates, setFollowStates] = useState({})
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    // clear store searchQuery after consuming it on mount
-    if (searchQuery) setSearchQuery('')
-  }, []) // eslint-disable-line
+  // search is driven by the store (set live by Topbar)
+  const search = searchQuery
 
   useEffect(() => {
     apiFetch(tok, '/api/users')

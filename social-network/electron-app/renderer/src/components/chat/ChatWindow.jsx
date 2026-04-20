@@ -2,11 +2,16 @@ import { useState, useEffect, useRef } from 'react'
 import { useStore } from '../../store'
 import { apiFetch, dname, fmt } from '../../lib/api'
 import Avatar from '../ui/Avatar'
+import { useOnline } from '../../hooks/useOnline'
+
+const OFFLINE_MSG = 'You are offline. Check your internet connection.'
 
 export default function ChatWindow() {
   const { tok, me, users, activeChatID, ws, cachedMsgs, setCachedMsgs, pushMsg, onlineIDs } = useStore()
   const [text, setText] = useState('')
+  const [sendErr, setSendErr] = useState('')
   const msgsRef = useRef()
+  const online = useOnline()
 
   const partner = users.find(u => u.id === activeChatID)
   const msgs = cachedMsgs[activeChatID] || []
@@ -24,7 +29,10 @@ export default function ChatWindow() {
   }, [msgs])
 
   function send() {
-    if (!text.trim() || !ws || ws.readyState !== WebSocket.OPEN) return
+    if (!text.trim()) return
+    if (!online) { setSendErr(OFFLINE_MSG); return }
+    if (!ws || ws.readyState !== WebSocket.OPEN) { setSendErr(OFFLINE_MSG); return }
+    setSendErr('')
     const msg = { type: 'chat_message', receiver_id: activeChatID, content: text }
     ws.send(JSON.stringify(msg))
     pushMsg(activeChatID, { ...msg, sender_id: me.id, created_at: new Date().toISOString() })
@@ -70,18 +78,30 @@ export default function ChatWindow() {
           )
         })}
       </div>
-      <div className="chat-inp-bar">
-        <textarea
-          className="chat-ta"
-          rows={1}
-          placeholder="Type a message…"
-          value={text}
-          onChange={e => setText(e.target.value)}
-          onKeyDown={onKeyDown}
-        />
-        <button className="chat-send" onClick={send} disabled={!text.trim()}>
-          <i className="bi bi-send" />
-        </button>
+      <div className="chat-inp-bar" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+        {sendErr && (
+          <div role="alert" style={{
+            padding: '0.35rem 0.75rem', fontSize: 12, fontWeight: 600,
+            color: '#fff', background: '#b91c1c',
+            borderRadius: '6px 6px 0 0',
+            display: 'flex', alignItems: 'center', gap: '0.4rem',
+          }}>
+            <i className="bi bi-wifi-off" /> {sendErr}
+          </div>
+        )}
+        <div style={{ display: 'flex', gap: 0 }}>
+          <textarea
+            className="chat-ta"
+            rows={1}
+            placeholder={online ? 'Type a message…' : 'You are offline…'}
+            value={text}
+            onChange={e => setText(e.target.value)}
+            onKeyDown={onKeyDown}
+          />
+          <button className="chat-send" onClick={send} disabled={!text.trim()}>
+            <i className="bi bi-send" />
+          </button>
+        </div>
       </div>
     </div>
   )

@@ -8,10 +8,15 @@ export default function Topbar() {
   const [q, setQ] = useState('')
 
   function doSearch(e) {
-    if (e.key === 'Enter' && q.trim()) {
-      setSearchQuery(q.trim())
-      setPage('people')
-    }
+    const val = e.target.value
+    setQ(val)
+    setSearchQuery(val)
+    if (val.trim()) setPage('people')
+  }
+
+  function navTo(pg, extra) {
+    if (pg !== 'people') { setQ(''); setSearchQuery('') }
+    setPage(pg, extra)
   }
 
   async function doLogout() {
@@ -24,16 +29,15 @@ export default function Topbar() {
     <div className="topbar">
       <div className="brand">Social<span>Net</span></div>
       <input className="tb-search" placeholder="Search people…" value={q}
-        onChange={e => setQ(e.target.value)}
-        onKeyDown={doSearch}
+        onChange={doSearch}
       />
       <div style={{ flex: 1 }} />
-      <button className="notif-btn" onClick={() => { setPage('notifications'); resetNotif() }}>
+      <button className="notif-btn" onClick={() => { navTo('notifications'); resetNotif() }}>
         <i className="bi bi-bell" />
         {notifCnt > 0 && <span className="notif-badge">{notifCnt}</span>}
       </button>
       <div className={`conn-dot ${wsOn ? 'on' : ''}`} title={wsOn ? 'Connected' : 'Disconnected'} />
-      <div className="tb-user" onClick={() => setPage('profile')}>
+      <div className="tb-user" onClick={() => navTo('profile')}>
         <Avatar user={me} size={28} className="tb-av" />
         <span className="tb-name">{dname(me)}</span>
       </div>
