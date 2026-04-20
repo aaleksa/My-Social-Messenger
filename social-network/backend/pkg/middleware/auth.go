@@ -54,7 +54,10 @@ func GetUserID(r *http.Request) int64 {
 
 var allowedOrigins = map[string]bool{
 	"http://localhost:3000": true,
+	"http://localhost:8080": true,
 	"http://localhost:8081": true,
+	"http://localhost:5173": true,
+	"http://localhost:5174": true,
 	// Electron renderer uses file:// which browsers report as "null"
 	"null": true,
 }
