@@ -2,12 +2,18 @@ package handlers
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
+	"strings"
 
 	"social-network/pkg/db/sqlite"
 	"social-network/pkg/middleware"
 	"social-network/pkg/models"
+
+	"github.com/gofrs/uuid"
 )
 
 type ProfileHandler struct {
@@ -150,4 +156,61 @@ func (h *ProfileHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(users)
+}
+
+// PUT /api/profile  (multipart/form-data: first_name, last_name, nickname, about_me, privacy, avatar)
+func (h *ProfileHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserID(r)
+
+	const maxSize = 10 << 20
+	r.Body = http.MaxBytesReader(w, r.Body, maxSize)
+	if err := r.ParseMultipartForm(maxSize); err != nil {
+		// fallback: try JSON
+		http.Error(w, "invalid form data", http.StatusBadRequest)
+		return
+	}
+
+	firstName := r.FormValue("first_name")
+	lastName := r.FormValue("last_name")
+	nickname := r.FormValue("nickname")
+	aboutMe := r.FormValue("about_me")
+	privacy := r.FormValue("privacy")
+	isPublic := privacy != "private"
+
+	// Handle optional avatar upload
+	avatarFilename := ""
+	file, header, err := r.FormFile("avatar")
+	if err == nil {
+		defer file.Close()
+		ext := filepath.Ext(header.Filename)
+		id, _ := uuid.NewV4()
+		avatarFilename = id.String() + strings.ToLower(ext)
+		if err := os.MkdirAll(uploadsDir, 0755); err == nil {
+			if dst, err := os.Create(filepath.Join(uploadsDir, avatarFilename)); err == nil {
+				defer dst.Close()
+				io.Copy(dst, file)
+			}
+		}
+	}
+
+	if avatarFilename != "" {
+		h.DB.Exec(
+			`UPDATE users SET first_name=?, last_name=?, nickname=?, about_me=?, is_public=?, avatar=? WHERE id=?`,
+			firstName, lastName, nickname, aboutMe, isPublic, avatarFilename, userID,
+		)
+	} else {
+		h.DB.Exec(
+			`UPDATE users SET first_name=?, last_name=?, nickname=?, about_me=?, is_public=? WHERE id=?`,
+			firstName, lastName, nickname, aboutMe, isPublic, userID,
+		)
+	}
+
+	var user models.User
+	h.DB.QueryRow(
+		`SELECT id, email, first_name, last_name, date_of_birth, avatar, nickname, about_me, is_public, created_at FROM users WHERE id=?`, userID,
+	).Scan(&user.ID, &user.Email, &user.FirstName, &user.LastName, &user.DateOfBirth,
+		&user.Avatar, &user.Nickname, &user.AboutMe, &user.IsPublic, &user.CreatedAt)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(user)
 }

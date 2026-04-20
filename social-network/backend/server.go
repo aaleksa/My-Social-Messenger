@@ -72,7 +72,13 @@ func main() {
 
 	mux.Handle("/api/me", protected(profileHandler.GetMe))
 	mux.Handle("/api/users", protected(profileHandler.ListUsers))
-	mux.Handle("/api/profile", protected(profileHandler.GetProfile))
+	mux.Handle("/api/profile", protected(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPut || r.Method == http.MethodPost {
+			profileHandler.UpdateProfile(w, r)
+		} else {
+			profileHandler.GetProfile(w, r)
+		}
+	}))
 	mux.Handle("/api/profile/privacy", protected(profileHandler.UpdatePrivacy))
 
 	mux.Handle("/api/follow", protected(func(w http.ResponseWriter, r *http.Request) {
