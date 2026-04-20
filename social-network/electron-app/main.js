@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, Notification, session, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, Notification, dialog, session, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
@@ -79,4 +79,12 @@ ipcMain.handle('notify', (_, { title, body }) => {
   if (Notification.isSupported()) {
     new Notification({ title, body, silent: false }).show();
   }
+});
+
+ipcMain.handle('pick-file', async () => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    properties: ['openFile'],
+    filters: [{ name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp'] }],
+  });
+  return result.filePaths[0] || null;
 });

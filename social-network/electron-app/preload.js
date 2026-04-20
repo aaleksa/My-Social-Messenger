@@ -6,4 +6,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
   clearSession: () => ipcRenderer.invoke('session:clear'),
   openRegister: () => ipcRenderer.invoke('open:register'),
   notify: (title, body) => ipcRenderer.invoke('notify', { title, body }),
+  pickFile: () => ipcRenderer.invoke('pick-file'),
 });
