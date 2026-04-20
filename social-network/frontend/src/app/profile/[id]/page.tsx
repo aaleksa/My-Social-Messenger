@@ -135,14 +135,23 @@ export default function UserProfilePage() {
                     {user.is_public ? "🌍 Set Private" : "🔒 Set Public"}
                   </button>
                 ) : (
-                  <button onClick={handleFollow} style={{
-                    padding: "0.5rem 1.25rem", borderRadius: "var(--radius)", fontSize: 14, fontWeight: 600, cursor: "pointer",
-                    border: followStatus === "pending" ? "1.5px solid #d97706" : "none",
-                    background: followStatus === "following" ? "var(--bg-input)" : followStatus === "pending" ? "rgba(217,119,6,.12)" : "var(--accent)",
-                    color: followStatus === "following" ? "var(--text)" : followStatus === "pending" ? "#d97706" : "#fff",
-                  }}>
-                    {followStatus === "following" ? "✓ Following" : followStatus === "pending" ? "⏳ Pending" : "+ Follow"}
-                  </button>
+                  <>
+                    <button onClick={handleFollow} style={{
+                      padding: "0.5rem 1.25rem", borderRadius: "var(--radius)", fontSize: 14, fontWeight: 600, cursor: "pointer",
+                      border: followStatus === "pending" ? "1.5px solid #d97706" : "none",
+                      background: followStatus === "following" ? "var(--bg-input)" : followStatus === "pending" ? "rgba(217,119,6,.12)" : "var(--accent)",
+                      color: followStatus === "following" ? "var(--text)" : followStatus === "pending" ? "#d97706" : "#fff",
+                    }}>
+                      {followStatus === "following" ? "✓ Following" : followStatus === "pending" ? "⏳ Pending" : "+ Follow"}
+                    </button>
+                    <a href={`/chat?userId=${user.id}`} style={{
+                      padding: "0.5rem 1.1rem", borderRadius: "var(--radius)", fontSize: 14, fontWeight: 600,
+                      border: "1.5px solid var(--border)", background: "var(--bg-input)", color: "var(--text)",
+                      textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "0.4rem",
+                    }}>
+                      💬 Message
+                    </a>
+                  </>
                 )}
               </div>
             </div>

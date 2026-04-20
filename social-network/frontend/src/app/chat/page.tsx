@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
 import { useWS } from "@/lib/WebSocketContext";
 import Sidebar from "@/components/Sidebar";
@@ -25,6 +26,8 @@ export default function ChatPage() {
   const [me, setMe] = useState<any>(null);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [selected, setSelected] = useState<Contact | null>(null);
+  const searchParams = useSearchParams();
+  const preselectedUserId = searchParams ? Number(searchParams.get("userId")) : 0;
   const [messages, setMessages] = useState<Message[]>([]);
   const [text, setText] = useState("");
   const [showEmoji, setShowEmoji] = useState(false);
@@ -54,6 +57,20 @@ export default function ChatPage() {
         const groupContacts: Contact[] = (Array.isArray(groups) ? groups : [])
           .map((g: any) => ({ id: g.id, type: "group" as const, name: g.title || `Group #${g.id}` }));
         setContacts([...userContacts, ...groupContacts]);
+        // auto-select contact from URL param
+        if (preselectedUserId) {
+          const target = userContacts.find(c => c.id === preselectedUserId);
+          if (target) setSelected(target);
+          else {
+            // user not in contacts yet — add them and select
+            const u = (Array.isArray(allUsers) ? allUsers : []).find((x: any) => x.id === preselectedUserId);
+            if (u) {
+              const c: Contact = { id: u.id, type: "user", name: `${u.first_name} ${u.last_name}`.trim() || `User #${u.id}` };
+              setContacts(prev => [c, ...prev]);
+              setSelected(c);
+            }
+          }
+        }
       })
       .catch(() => {});
   }, []);

@@ -1,6 +1,6 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useStore } from '../../store'
-import { apiForm } from '../../lib/api'
+import { apiForm, apiFetch } from '../../lib/api'
 import Avatar from '../ui/Avatar'
 
 export default function PostCreate({ onPost, groupId }) {
@@ -9,7 +9,25 @@ export default function PostCreate({ onPost, groupId }) {
   const [vis, setVis] = useState('public')
   const [image, setImage] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [followers, setFollowers] = useState([])
+  const [allowed, setAllowed] = useState(new Set())
   const fileRef = useRef()
+
+  useEffect(() => {
+    if (vis === 'private' && me?.id) {
+      apiFetch(tok, `/api/follow?user_id=${me.id}`)
+        .then(d => setFollowers(d || []))
+        .catch(() => {})
+    }
+  }, [vis, me?.id])
+
+  function toggleAllowed(uid) {
+    setAllowed(prev => {
+      const next = new Set(prev)
+      if (next.has(uid)) next.delete(uid); else next.add(uid)
+      return next
+    })
+  }
 
   async function submit(e) {
     e.preventDefault()
@@ -21,9 +39,11 @@ export default function PostCreate({ onPost, groupId }) {
       fd.append('privacy', groupId ? 'group' : vis)
       if (groupId) fd.append('group_id', groupId)
       if (image) fd.append('image', image)
+      if (vis === 'private' && allowed.size > 0)
+        fd.append('allowed_users', JSON.stringify([...allowed]))
       const post = await apiForm(tok, '/api/posts', fd)
       onPost?.(post)
-      setContent(''); setImage(null)
+      setContent(''); setImage(null); setAllowed(new Set())
     } catch (_) {}
     setLoading(false)
   }
@@ -59,7 +79,7 @@ export default function PostCreate({ onPost, groupId }) {
         </button>
         {!groupId && (
           <select className="fg" style={{ padding: '5px 10px', fontSize: 12, background: 'var(--bg-mid)', border: '1px solid var(--border)', color: 'var(--text)', borderRadius: 8 }}
-            value={vis} onChange={e => setVis(e.target.value)}>
+            value={vis} onChange={e => { setVis(e.target.value); setAllowed(new Set()) }}>
             <option value="public">🌍 Public</option>
             <option value="almost_private">👥 Followers</option>
             <option value="private">🔒 Private</option>
@@ -71,6 +91,23 @@ export default function PostCreate({ onPost, groupId }) {
         </button>
       </div>
       {image && <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 6 }}>📎 {image.name}</div>}
+      {vis === 'private' && !groupId && (
+        <div style={{ marginTop: 10, padding: '8px 10px', background: 'var(--bg-mid)', borderRadius: 8, border: '1px solid var(--border)' }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-dim)', marginBottom: 6 }}>Choose who can see this post:</div>
+          {followers.length === 0
+            ? <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>No followers yet — post will be visible to no one.</div>
+            : <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 160, overflowY: 'auto' }}>
+                {followers.map(f => (
+                  <label key={f.id} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13 }}>
+                    <input type="checkbox" checked={allowed.has(f.id)} onChange={() => toggleAllowed(f.id)} />
+                    <Avatar user={f} size={22} />
+                    {f.first_name} {f.last_name}
+                  </label>
+                ))}
+              </div>
+          }
+        </div>
+      )}
       <input ref={fileRef} type="file" accept="image/*" hidden onChange={e => setImage(e.target.files[0])} />
     </form>
   )

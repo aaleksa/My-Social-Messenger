@@ -37,6 +37,17 @@ export default function Notifications() {
     } catch (_) {}
   }
 
+  async function respondGroup(notif, action) {
+    try {
+      await apiFetch(tok, '/api/groups/respond', {
+        method: 'POST',
+        body: JSON.stringify({ group_id: notif.reference_id, user_id: notif.actor_id || notif.user_id, accept: action === 'accept' }),
+      })
+      await apiFetch(tok, '/api/notifications', { method: 'PUT', body: JSON.stringify({ id: notif.id }) })
+      setNotifs(prev => prev.map(n => n.id === notif.id ? { ...n, is_read: true } : n))
+    } catch (_) {}
+  }
+
   return (
     <div>
       <div className="page-title"><i className="bi bi-bell" /> Notifications</div>
@@ -54,6 +65,12 @@ export default function Notifications() {
               <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
                 <button className="btn btn-primary btn-sm" onClick={e => { e.stopPropagation(); respond(n, 'accept') }}>Accept</button>
                 <button className="btn btn-secondary btn-sm" onClick={e => { e.stopPropagation(); respond(n, 'decline') }}>Decline</button>
+              </div>
+            )}
+            {(n.type === 'group_invite') && !n.is_read && (
+              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                <button className="btn btn-primary btn-sm" onClick={e => { e.stopPropagation(); respondGroup(n, 'accept') }}>Join Group</button>
+                <button className="btn btn-secondary btn-sm" onClick={e => { e.stopPropagation(); respondGroup(n, 'decline') }}>Decline</button>
               </div>
             )}
           </div>
