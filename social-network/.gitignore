@@ -1,0 +1,30 @@
+# ── Backend ──────────────────────────────────────────────
+backend/server
+backend/*.db
+backend/data/
+backend/uploads/
+
+# Go build cache
+*.test
+*.out
+
+# ── Frontend ─────────────────────────────────────────────
+node_modules/
+frontend/.next/
+frontend/out/
+frontend/.env*.local
+
+# ── Docker / OS ──────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── Environment / secrets ────────────────────────────────
+.env
+.env.local
+.env.*.local
+
+# ── IDE ──────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo

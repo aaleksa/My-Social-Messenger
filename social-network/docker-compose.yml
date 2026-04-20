@@ -1,0 +1,42 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: social-network-backend
+    ports:
+      - "8081:8080"
+    volumes:
+      - db_data:/app/data
+      - uploads_data:/app/uploads
+    environment:
+      - DB_PATH=/app/data/social_network.db
+      - MIGRATIONS_PATH=pkg/db/migrations/sqlite
+      - PORT=:8080
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        BACKEND_URL: http://backend:8080
+    container_name: social-network-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - BACKEND_URL=http://backend:8080
+      - HOSTNAME=0.0.0.0
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  db_data:
+  uploads_data:
