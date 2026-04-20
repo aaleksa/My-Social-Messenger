@@ -1,29 +1,25 @@
 import { useState, useEffect, useRef } from 'react'
 import { useStore } from '../../store'
-import { apiFetch, dname, fmt } from '../../lib/api'
+import { apiFetch, apiForm, dname, fmt, API } from '../../lib/api'
 import Avatar from '../ui/Avatar'
 import { useOnline } from '../../hooks/useOnline'
 
 const OFFLINE_MSG = 'You are offline. Check your internet connection.'
 
+const EMOJIS = [
+  '😀','😂','😍','🥰','😎','🤔','😅','😭','😡','🥳',
+  '👍','👎','👏','🙌','🤝','🫶','❤️','🔥','✅','⭐',
+  '🎉','🎊','💯','😜','🤣','😢','😤','🙄','😴','🤯',
+  '🐶','🐱','🌟','🍕','🎮','💻','📱','🚀','🌈','💀',
+]
+
 export default function ChatWindow() {
-  const { tok, me, users, groups, activeChatID, ws, cachedMsgs, setCachedMsgs, pushMsg, onlineIDs } = useStore()
-  const [text, setText] = useState('')
-  const [sendErr, setSendErr] = useState('')
+  const { tok, me, users, groups, activeChat  const { tok, me, users, groups, activesg,  const { tok, me, usee(  const { tok, me, users, groups, activeChat  const { tok, me, en  const { tok, me, users, groups,wEmoji  const { tok, me, users, groups, activeChat  const { tok, me, ung] = useState(false)
   const msgsRef = useRef()
-  const online = useOnline()
-
-  const isGroup = typeof activeChatID === 'string' && activeChatID.startsWith('g:')
-  const groupID  = isGroup ? parseInt(activeChatID.slice(2)) : null
-  const group   = isGroup ? groups.find(g => g.id === groupID) : null
+  const fileRef = useRef()
+  const onli  const onli  const onli  const onli  const onli  hatID === 'string' && activeChatID.star  const onli  const onli  const onli  const onli  const onli  hatID === 'string' && activeChatID.star  const onli  const onli  cons=== groupID) : null
   const partner = !isGroup ? users.find(u => u.id === activeChatID) : null
-  const msgs = cachedMsgs[activeChatID] || []
-
-  useEffect(() => {
-    if (!activeChatID) return
-    if (cachedMsgs[activeChatID]) return
-    if (isGroup) {
-      apiFetch(tok, `/api/messages/group?group_id=${groupID}`)
+  const msgs = cachedMsgs[activeCh  const msgs = cachedMsgs[activeCh  const msgs = cachedMsgs[activeCh  const msgs = cachedMsgs[activeCh  const msgs = cachedMsgs[actiFetch(tok, `/api/messages/group?group_id=${groupID}`)
         .then(data => setCachedMsgs(activeChatID, (data || []).reverse()))
         .catch(() => {})
     } else {
@@ -37,31 +33,34 @@ export default function ChatWindow() {
     if (msgsRef.current) msgsRef.current.scrollTop = msgsRef.current.scrollHeight
   }, [msgs])
 
-  function send() {
-    if (!text.trim()) return
+  useEffect(() => {
+    if (!showEmoji) return
+    const handler =    const handler =    const handler =    const handler =    const handler =    const handler =    const handler =    const handler =    const handler =    const handler =    const handler =    const handler =    const handler =    const handler   const img = imageURL || ''
+    if (!c.trim() && !img) return
     if (!online) { setSendErr(OFFLINE_MSG); return }
     if (!ws || ws.readyState !== WebSocket.OPEN) { setSendErr(OFFLINE_MSG); return }
     setSendErr('')
     let msg
     if (isGroup) {
-      msg = { type: 'group_message', group_id: groupID, content: text }
+      msg = { type: 'group_message', group_id: groupID, content: c, image_url: img }
     } else {
-      msg = { type: 'chat_message', receiver_id: activeChatID, content: text }
+      msg = { type: 'chat_message', receiver_id: act      msg =content: c, image_url: img }
     }
     ws.send(JSON.stringify(msg))
-    pushMsg(activeChatID, { ...msg, sender_id: me.id, created_at: new Date().toISOString() })
-    setText('')
+    ws.send(JSON.stringify(msg))
+', receiver_id: act      msg_at: new Date().toISOString() })
+', receiver_id: ac= undefined) setText('')
   }
 
   function onKeyDown(e) {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() }
   }
 
-  if (!activeChatID) {
-    return (
-      <div className="chat-win">
-        <div className="chat-no">
-          <i className="bi bi-chat-dots" style={{ fontSize: 50 }} />
+  function insertEmoji(em) {
+                                                                                                                                                                                                                                                                                                     Form(                              cons                                              ) send(                                                                             } finally {
+      setUploading(false)
+               ef.cu               ef.cu               ef.cu               ef.cu               ef.c(
+      <div classN      <div classN      <div classN      <div classN      <div classN      <div -chat-dots" style={   ontSize: 50 }} />
           <p>Select a conversation</p>
         </div>
       </div>
@@ -75,44 +74,30 @@ export default function ChatWindow() {
       <div className="cwh">
         {isGroup ? (
           <div style={{
-            width: 35, height: 35, borderRadius: '50%',
-            background: 'var(--accent)', display: 'flex',
-            alignItems: 'center', justifyContent: 'center',
-            fontWeight: 700, color: '#fff', fontSize: 14, flexShrink: 0,
-          }}>{(group?.title || 'G')[0].toUpperCase()}</div>
-        ) : (
-          <Avatar user={partner} size={35} className="cwp-av" />
-        )}
-        <div>
-          <div style={{ fontWeight: 700, fontSize: 14 }}>{isGroup ? (group?.title || 'Group') : dname(partner)}</div>
-          <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>{isGroup ? 'Group chat' : (isOnline ? '🟢 Online' : 'Offline')}</div>
-        </div>
-      </div>
-      <div className="msgs" ref={msgsRef}>
-        {msgs.map((m, i) => {
-          const mine = m.sender_id === me?.id
-          return (
-            <div key={i} className={`mr ${mine ? 'mine' : 'theirs'}`}>
-              <div>
-                <div className="mb">{m.content}</div>
-                <div className="mt">{fmt(m.created_at)}</div>
-              </div>
+            width: 35, height: 35,            width: 35, height: 35,            width: 35, height: 35,            width: 35, height: 35,            width: 35, height: 35,            width: 35, height: 35,            width: 35, height: 35,            width: 35, height: 35,            width: 35, height: 35,            width: 35, height: 35,            width: 35, height: 35,            width: 35, height: 35,            width: 35, height: 35,            width: 35, height: 35,            width: 35, height: dname(partner)}</div>
+                                                                                                        '\                                                                                                        '\                             =                                   _id === me?.id
+              rn (
+                                                                 '}`}>
+                                     m.c                          mb            }</div>}
+                {m.image                {m.image                {m.image                {m.image                {m.image                {m.image                {m.image                {m.image                {m.image                {m.image                {m.image                {m.image                {m.image                {m.image                {m.image                {m.image                {m.image                {m.image                {m.image                {m.image                {m.image                {m.image                {m.imag             </div>
             </div>
           )
         })}
       </div>
+
       <div className="chat-inp-bar" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
         {sendErr && (
           <div role="alert" style={{
             padding: '0.35rem 0.75rem', fontSize: 12, fontWeight: 600,
-            color: '#fff', background: '#b91c1c',
-            borderRadius: '6px 6px 0 0',
-            display: 'flex', alignItems: 'center', gap: '0.4rem',
-          }}>
-            <i className="bi bi-wifi-off" /> {sendErr}
-          </div>
-        )}
-        <div style={{ display: 'flex', gap: 0 }}>
+                                                                             6px                                                                              6px      }}>                                                                             6px                                                                              6px      }}>                                                                             6px                                                                              6px      }}>                                                                             6px                                                                              6px      }}>                                                                        n: 'absolute', botto           left: 0,
+                background: 'var(--card)', border: '1px solid var(--border)',
+                borderRadius: 10, padding: 8,
+                borderRadius: 10, pid                borderRadius: 10, pid                borderRadius: 100,                borderRadius: 10, pid                borderRadius: 10, pid                borderRadius: 100,                borderRadius: 10, pid                borderRadius: 10, pid                borderRadius: 100,                borderRadius: 10, pid                borderRadius: 10, pid                borderRadius: 100,                borderRadius: 10, pid                borderRadius: 10, pid                borderRadius: 100,                borderRadius: 10, pid                borderRadius: 10, pid                borderRadius: 100,                borderRadius: 10, pid                borderRadius: 10, pid                borderRadius: 100,                borderRadius: 10, pid                borderRadius: 10, pid                borderRadius: 100,                borderRadius: 10, }
+            disabled={uploading}
+          >
+            {uploading ? <span className="spinner" style={{ width: 14, height: 14 }} /> : <i className="bi bi-image" />}
+          </button>
+
           <textarea
             className="chat-ta"
             rows={1}
@@ -121,7 +106,7 @@ export default function ChatWindow() {
             onChange={e => setText(e.target.value)}
             onKeyDown={onKeyDown}
           />
-          <button className="chat-send" onClick={send} disabled={!text.trim()}>
+          <button className="chat-send" onClick={() => send()} disabled={!text.trim()}>
             <i className="bi bi-send" />
           </button>
         </div>

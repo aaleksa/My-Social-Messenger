@@ -10,15 +10,44 @@ const NAV = [
 ]
 
 export default function Sidebar() {
-  const { page, setPage } = useStore()
+  const { page, setPage, unreadDM, unreadGroup, notifCnt, resetNotif } = useStore()
+
+  const totalChat = Object.values(unreadDM).reduce((s, v) => s + v, 0)
+    + Object.values(unreadGroup).reduce((s, v) => s + v, 0)
+
+  const badges = {
+    chat: totalChat,
+    notifications: notifCnt,
+  }
+
+  function navigate(key) {
+    setPage(key)
+    if (key === 'notifications') resetNotif()
+  }
+
   return (
     <nav className="nav-sidebar">
-      {NAV.map(n => (
-        <div key={n.key} className={`ni ${page === n.key ? 'active' : ''}`} onClick={() => setPage(n.key)}>
-          <i className={`bi ${n.icon} ni-icon`} />
-          {n.label}
-        </div>
-      ))}
+      {NAV.map(n => {
+        const badge = badges[n.key] || 0
+        return (
+          <div key={n.key} className={`ni ${page === n.key ? 'active' : ''}`} onClick={() => navigate(n.key)}>
+            <div style={{ position: 'relative', display: 'inline-flex' }}>
+              <i className={`bi ${n.icon} ni-icon`} />
+              {badge > 0 && (
+                <span style={{
+                  position: 'absolute', top: -4, right: -6,
+                  background: '#ef4444', color: '#fff',
+                  borderRadius: '50%', fontSize: 9, fontWeight: 700,
+                  minWidth: 14, height: 14, display: 'flex',
+                  alignItems: 'center', justifyContent: 'center',
+                  padding: '0 2px', lineHeight: 1,
+                }}>{badge > 99 ? '99+' : badge}</span>
+              )}
+            </div>
+            {n.label}
+          </div>
+        )
+      })}
     </nav>
   )
 }

@@ -26,7 +26,7 @@ func (h *ChatHandler) GetMessages(w http.ResponseWriter, r *http.Request) {
 	senderID := middleware.GetUserID(r)
 	recipientID, _ := strconv.ParseInt(r.URL.Query().Get("recipient_id"), 10, 64)
 	rows, err := h.DB.Query(
-		`SELECT id, sender_id, recipient_id, content, created_at FROM messages
+		`SELECT id, sender_id, recipient_id, content, image_url, created_at FROM messages
 		 WHERE (sender_id = ? AND recipient_id = ?) OR (sender_id = ? AND recipient_id = ?)
 		 ORDER BY created_at ASC`, senderID, recipientID, recipientID, senderID,
 	)
@@ -38,7 +38,7 @@ func (h *ChatHandler) GetMessages(w http.ResponseWriter, r *http.Request) {
 	var messages []models.Message
 	for rows.Next() {
 		var m models.Message
-		rows.Scan(&m.ID, &m.SenderID, &m.RecipientID, &m.Content, &m.CreatedAt)
+		rows.Scan(&m.ID, &m.SenderID, &m.RecipientID, &m.Content, &m.ImageURL, &m.CreatedAt)
 		messages = append(messages, m)
 	}
 	if messages == nil {
@@ -54,8 +54,9 @@ func (h *ChatHandler) SendMessage(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		RecipientID int64  `json:"recipient_id"`
 		Content     string `json:"content"`
+		ImageURL    string `json:"image_url"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Content == "" {
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || (req.Content == "" && req.ImageURL == "") {
 		http.Error(w, "invalid request", http.StatusBadRequest)
 		return
 	}
@@ -73,8 +74,8 @@ func (h *ChatHandler) SendMessage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result, err := h.DB.Exec(
-		`INSERT INTO messages (sender_id, recipient_id, content) VALUES (?, ?, ?)`,
-		senderID, req.RecipientID, req.Content,
+		`INSERT INTO messages (sender_id, recipient_id, content, image_url) VALUES (?, ?, ?, ?)`,
+		senderID, req.RecipientID, req.Content, req.ImageURL,
 	)
 	if err != nil {
 		http.Error(w, "internal server error", http.StatusInternalServerError)
@@ -102,10 +103,11 @@ func (h *ChatHandler) SendMessage(w http.ResponseWriter, r *http.Request) {
 func (h *ChatHandler) SendGroupMessage(w http.ResponseWriter, r *http.Request) {
 	senderID := middleware.GetUserID(r)
 	var req struct {
-		GroupID int64  `json:"group_id"`
-		Content string `json:"content"`
+		GroupID  int64  `json:"group_id"`
+		Content  string `json:"content"`
+		ImageURL string `json:"image_url"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Content == "" {
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || (req.Content == "" && req.ImageURL == "") {
 		http.Error(w, "invalid request", http.StatusBadRequest)
 		return
 	}
@@ -120,8 +122,8 @@ func (h *ChatHandler) SendGroupMessage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result, err := h.DB.Exec(
-		`INSERT INTO group_messages (group_id, sender_id, content) VALUES (?, ?, ?)`,
-		req.GroupID, senderID, req.Content,
+		`INSERT INTO group_messages (group_id, sender_id, content, image_url) VALUES (?, ?, ?, ?)`,
+		req.GroupID, senderID, req.Content, req.ImageURL,
 	)
 	if err != nil {
 		http.Error(w, "internal server error", http.StatusInternalServerError)
@@ -172,7 +174,7 @@ func (h *ChatHandler) GetGroupMessages(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	rows, err := h.DB.Query(
-		`SELECT id, group_id, sender_id, content, created_at FROM group_messages WHERE group_id = ? ORDER BY created_at ASC`,
+		`SELECT id, group_id, sender_id, content, image_url, created_at FROM group_messages WHERE group_id = ? ORDER BY created_at ASC`,
 		groupID,
 	)
 	if err != nil {
@@ -183,7 +185,7 @@ func (h *ChatHandler) GetGroupMessages(w http.ResponseWriter, r *http.Request) {
 	var messages []models.GroupMessage
 	for rows.Next() {
 		var m models.GroupMessage
-		rows.Scan(&m.ID, &m.GroupID, &m.SenderID, &m.Content, &m.CreatedAt)
+		rows.Scan(&m.ID, &m.GroupID, &m.SenderID, &m.Content, &m.ImageURL, &m.CreatedAt)
 		messages = append(messages, m)
 	}
 	if messages == nil {

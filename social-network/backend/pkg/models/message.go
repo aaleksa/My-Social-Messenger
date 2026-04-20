@@ -7,6 +7,7 @@ type Message struct {
 	SenderID    int64     `json:"sender_id"`
 	RecipientID int64     `json:"recipient_id"`
 	Content     string    `json:"content"`
+	ImageURL    string    `json:"image_url,omitempty"`
 	CreatedAt   time.Time `json:"created_at"`
 }
 
@@ -15,5 +16,6 @@ type GroupMessage struct {
 	GroupID   int64     `json:"group_id"`
 	SenderID  int64     `json:"sender_id"`
 	Content   string    `json:"content"`
+	ImageURL  string    `json:"image_url,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
 }

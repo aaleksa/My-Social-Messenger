@@ -23,6 +23,7 @@ type WSMessage struct {
 	RecipientID int64           `json:"recipient_id,omitempty"`
 	GroupID     int64           `json:"group_id,omitempty"`
 	Content     string          `json:"content"`
+	ImageURL    string          `json:"image_url,omitempty"`
 	ClientType  string          `json:"client_type,omitempty"`
 	CreatedAt   time.Time       `json:"created_at"`
 	Payload     json.RawMessage `json:"payload,omitempty"`

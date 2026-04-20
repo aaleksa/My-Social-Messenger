@@ -1,0 +1,2 @@
+ALTER TABLE messages ADD COLUMN image_url TEXT NOT NULL DEFAULT '';
+ALTER TABLE group_messages ADD COLUMN image_url TEXT NOT NULL DEFAULT '';
