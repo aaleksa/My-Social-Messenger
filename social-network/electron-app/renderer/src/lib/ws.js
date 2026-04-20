@@ -29,10 +29,12 @@ function handleMsg(msg, store) {
       break
     case 'chat_message': {
       s.pushMsg(msg.sender_id, msg)
-      if (s.activeChatID !== msg.sender_id) s.addUnread(msg.sender_id)
-      if (window.electronAPI) {
+      if (s.activeChatID !== msg.sender_id) {
+        s.addUnread(msg.sender_id)
         const sender = s.users.find(u => u.id === msg.sender_id)
-        window.electronAPI.notify(dname(sender || {}), msg.content)
+        const preview = msg.content?.length > 60 ? msg.content.slice(0, 60) + '…' : msg.content
+        s.showToast(`💬 ${dname(sender || {})} — ${preview}`)
+        if (window.electronAPI) window.electronAPI.notify(dname(sender || {}), msg.content)
       }
       break
     }

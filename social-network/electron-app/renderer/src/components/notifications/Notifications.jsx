@@ -26,6 +26,13 @@ export default function Notifications() {
     } catch (_) {}
   }
 
+  async function markAllRead() {
+    try {
+      await apiFetch(tok, '/api/notifications', { method: 'PUT', body: JSON.stringify({ all: true }) })
+      setNotifs(prev => prev.map(n => ({ ...n, is_read: true })))
+    } catch (_) {}
+  }
+
   async function respond(notif, action) {
     try {
       await apiFetch(tok, '/api/follow/respond', {
@@ -50,7 +57,14 @@ export default function Notifications() {
 
   return (
     <div>
-      <div className="page-title"><i className="bi bi-bell" /> Notifications</div>
+      <div className="page-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span><i className="bi bi-bell" /> Notifications</span>
+        {notifs.some(n => !n.is_read) && (
+          <button className="btn btn-secondary btn-sm" onClick={markAllRead}>
+            <i className="bi bi-check2-all" /> Mark all as read
+          </button>
+        )}
+      </div>
       {loading && <div className="loading"><span className="spinner" /> Loading…</div>}
       {!loading && notifs.length === 0 && (
         <div className="empty"><div className="ei">🔔</div>No notifications</div>
