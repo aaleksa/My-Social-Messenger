@@ -75,7 +75,7 @@ export default function PeoplePage() {
       <Sidebar />
       <main style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.25rem", gap: "1rem", flexWrap: "wrap" }}>
-          <h2 style={{ fontSize: 20, fontWeight: 700 }}>🔍 People</h2>
+          <h2 style={{ fontSize: 20, fontWeight: 700 }}>People</h2>
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}

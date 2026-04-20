@@ -52,12 +52,6 @@ export default function People() {
     <div>
       <div className="sec-hdr">
         <div className="page-title"><i className="bi bi-people" /> People</div>
-        <input
-          style={{ padding: '7px 13px', background: 'var(--bg-mid)', border: '1px solid var(--border)', borderRadius: 20, color: 'var(--text)', fontSize: 13, outline: 'none' }}
-          placeholder="Search…"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-        />
       </div>
       {loading && <div className="loading"><span className="spinner" /> Loading…</div>}
       <div className="people-grid">
