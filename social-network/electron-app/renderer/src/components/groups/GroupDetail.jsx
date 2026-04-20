@@ -6,7 +6,7 @@ import Modal from '../ui/Modal'
 import PostCreate from '../feed/PostCreate'
 
 export default function GroupDetail({ group, onBack }) {
-  const { tok, me, cachedMsgs, setCachedMsgs, pushMsg } = useStore()
+  const { tok, me, users, cachedMsgs, setCachedMsgs, pushMsg } = useStore()
   const [tab, setTab] = useState('posts')
   const [posts, setPosts] = useState([])
   const [members, setMembers] = useState([])
@@ -15,6 +15,9 @@ export default function GroupDetail({ group, onBack }) {
   const [responses, setResponses] = useState({})
   const [showEvent, setShowEvent] = useState(false)
   const [ev, setEv] = useState({ title: '', description: '', event_time: '' })
+  const [showInvite, setShowInvite] = useState(false)
+  const [inviteSearch, setInviteSearch] = useState('')
+  const [inviting, setInviting] = useState({})
   const [chatInput, setChatInput] = useState('')
   const chatKey = `g:${group.id}`
   const chatMsgs = cachedMsgs[chatKey] || []
@@ -81,6 +84,29 @@ export default function GroupDetail({ group, onBack }) {
     }
   }
 
+  async function inviteUser(userId) {
+    setInviting(prev => ({ ...prev, [userId]: 'loading' }))
+    try {
+      await apiFetch(tok, '/api/groups/invite', {
+        method: 'POST',
+        body: JSON.stringify({ group_id: group.id, user_id: userId }),
+      })
+      setInviting(prev => ({ ...prev, [userId]: 'done' }))
+    } catch (_) {
+      setInviting(prev => ({ ...prev, [userId]: 'error' }))
+    }
+  }
+
+  const memberIds = new Set(members.map(m => m.id))
+  const invitablePeople = users.filter(u =>
+    u.id !== me?.id &&
+    !memberIds.has(u.id) &&
+    (inviteSearch === '' ||
+      dname(u).toLowerCase().includes(inviteSearch.toLowerCase()) ||
+      (u.email || '').toLowerCase().includes(inviteSearch.toLowerCase())
+    )
+  )
+
   async function sendGroupMsg(e) {
     e.preventDefault()
     if (!chatInput.trim()) return
@@ -142,13 +168,64 @@ export default function GroupDetail({ group, onBack }) {
 
       {tab === 'members' && (
         <div>
+          {isMember && (
+            <div style={{ marginBottom: 12 }}>
+              <button className="btn btn-primary btn-sm" onClick={() => { setShowInvite(true); setInviteSearch(''); setInviting({}) }}>
+                <i className="bi bi-person-plus" /> Invite People
+              </button>
+            </div>
+          )}
+          {members.length === 0 && <div className="empty"><div className="ei">👥</div>No members yet</div>}
           {members.map(m => (
             <div key={m.id} className="card" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <Avatar user={m} size={38} />
-              <div>{dname(m)}</div>
-              {m.id === group.creator_id && <span className="tag owner">Owner</span>}
+              <div style={{ flex: 1 }}>{dname(m)}</div>
+              {m.id === group.creator_id && <span className="tag owner" style={{ background: 'var(--accent)', color: '#fff', borderRadius: 6, padding: '2px 8px', fontSize: 11, fontWeight: 700 }}>Owner</span>}
             </div>
           ))}
+
+          {showInvite && (
+            <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.55)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              onClick={e => e.target === e.currentTarget && setShowInvite(false)}>
+              <div style={{ background: 'var(--bg-card)', borderRadius: 14, padding: 24, width: 380, maxHeight: '70vh', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ fontWeight: 700, fontSize: 16 }}>Invite People</div>
+                  <button className="btn btn-secondary btn-sm" onClick={() => setShowInvite(false)}>✕</button>
+                </div>
+                <input
+                  className="input"
+                  placeholder="Search by name or email…"
+                  value={inviteSearch}
+                  onChange={e => setInviteSearch(e.target.value)}
+                  autoFocus
+                />
+                <div style={{ overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {invitablePeople.length === 0 && (
+                    <div style={{ textAlign: 'center', color: 'var(--text-dim)', padding: 20 }}>No people found</div>
+                  )}
+                  {invitablePeople.map(u => {
+                    const state = inviting[u.id]
+                    return (
+                      <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 4px', borderBottom: '1px solid var(--border)' }}>
+                        <Avatar user={u} size={36} />
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontWeight: 600, fontSize: 14 }}>{dname(u)}</div>
+                          {u.email && <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>{u.email}</div>}
+                        </div>
+                        <button
+                          className={`btn btn-sm ${state === 'done' ? 'btn-secondary' : 'btn-primary'}`}
+                          disabled={state === 'loading' || state === 'done'}
+                          onClick={() => inviteUser(u.id)}
+                        >
+                          {state === 'loading' ? '…' : state === 'done' ? '✓ Invited' : 'Invite'}
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
