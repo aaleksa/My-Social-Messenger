@@ -4,225 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>Social Network</title>
-<style>
-/* ── Reset & Variables ─────────────────────────────────── */
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --bg-deep:#0f0f1a;--bg-dark:#16162a;--bg-mid:#1e1e35;--bg-light:#272744;
-  --accent:#7c6af7;--accent-h:#9b8dff;--accent2:#f472b6;
-  --text:#e0e0f0;--text-dim:#888aaa;
-  --online:#4ade80;--offline:#f87171;
-  --bubble-me:#3d2e8a;--bubble-them:#23233f;
-  --border:#2e2e50;--radius:12px;--tr:0.18s ease;
-}
-html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg-deep);color:var(--text)}
-::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--bg-light);border-radius:3px}
-.hidden{display:none!important}
-img{max-width:100%;border-radius:8px;object-fit:cover}
-
-/* ── Toast ─────────────────────────────────────────────── */
-#toast{position:fixed;top:16px;left:50%;transform:translateX(-50%);background:var(--bg-light);color:var(--text);padding:10px 22px;border-radius:20px;font-size:13px;z-index:9999;box-shadow:0 4px 20px #0006;transition:opacity var(--tr);pointer-events:none}
-
-/* ── Modal ─────────────────────────────────────────────── */
-.modal-backdrop{position:fixed;inset:0;background:#0009;z-index:800;display:flex;align-items:center;justify-content:center}
-.modal{background:var(--bg-dark);border:1px solid var(--border);border-radius:var(--radius);padding:28px 24px;width:440px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px #000a}
-.modal h2{font-size:17px;margin-bottom:18px}
-.modal-close{float:right;background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer}
-.modal-close:hover{color:var(--text)}
-
-/* ── Forms ─────────────────────────────────────────────── */
-.fg{margin-bottom:14px}
-.fg label{display:block;font-size:11px;color:var(--text-dim);margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px}
-.fg input,.fg textarea,.fg select{width:100%;padding:9px 13px;background:var(--bg-mid);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;outline:none;transition:border-color var(--tr);font-family:inherit}
-.fg input:focus,.fg textarea:focus,.fg select:focus{border-color:var(--accent)}
-.fg textarea{resize:vertical;min-height:70px}
-.btn{padding:9px 18px;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;transition:background var(--tr),opacity var(--tr)}
-.btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:var(--accent-h)}
-.btn-secondary{background:var(--bg-light);color:var(--text-dim)}.btn-secondary:hover{color:var(--text)}
-.btn-danger{background:#7f1d1d;color:#fca5a5}.btn-danger:hover{background:#991b1b}
-.btn-sm{padding:5px 12px;font-size:12px}
-.btn:disabled{opacity:.5;cursor:not-allowed}
-
-/* ── Login ─────────────────────────────────────────────── */
-#login-screen{height:100%;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 40%,#1a1640 0%,var(--bg-deep) 70%)}
-.login-card{background:var(--bg-dark);border:1px solid var(--border);border-radius:var(--radius);padding:40px 36px;width:380px;box-shadow:0 20px 60px #0008}
-.login-card h1{font-size:22px;font-weight:700;margin-bottom:6px;text-align:center}
-.login-card .sub{text-align:center;color:var(--text-dim);font-size:13px;margin-bottom:26px}
-#login-error{color:var(--offline);font-size:13px;text-align:center;margin-top:10px;min-height:18px}
-.toggle-pw{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-dim);font-size:16px;padding:0}
-
-/* ── App shell ─────────────────────────────────────────── */
-#app{height:100%;display:grid;grid-template-columns:210px 1fr;grid-template-rows:48px 1fr;grid-template-areas:"tb tb""nav main"}
-
-/* ── Topbar ────────────────────────────────────────────── */
-#topbar{grid-area:tb;display:flex;align-items:center;padding:0 16px;background:var(--bg-dark);border-bottom:1px solid var(--border);gap:12px}
-.brand{font-weight:800;font-size:15px}.brand span{color:var(--accent)}
-.tb-search{flex:1;max-width:300px;padding:7px 13px;background:var(--bg-mid);border:1px solid var(--border);border-radius:20px;color:var(--text);font-size:13px;outline:none;transition:border-color var(--tr)}
-.tb-search:focus{border-color:var(--accent)}
-#notif-btn{position:relative;background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer;padding:4px 8px;border-radius:8px;transition:color var(--tr)}
-#notif-btn:hover{color:var(--text)}
-#notif-badge{position:absolute;top:0;right:0;background:var(--accent2);color:#fff;border-radius:10px;font-size:10px;font-weight:700;padding:1px 5px;min-width:16px;text-align:center;display:none}
-#conn-dot{width:8px;height:8px;border-radius:50%;background:var(--offline);flex-shrink:0;transition:background var(--tr)}
-#conn-dot.on{background:var(--online)}
-.tb-user{display:flex;align-items:center;gap:8px;cursor:pointer;padding:4px 8px;border-radius:8px;transition:background var(--tr)}
-.tb-user:hover{background:var(--bg-mid)}
-.tb-av{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#4f46e5,#7c6af7);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;overflow:hidden;flex-shrink:0}
-.tb-av img{width:100%;height:100%;object-fit:cover;border-radius:50%}
-#tb-name{font-size:13px;font-weight:600}
-#logout-btn{padding:5px 12px;border:1px solid var(--border);border-radius:8px;background:transparent;color:var(--text-dim);cursor:pointer;font-size:12px;transition:color var(--tr)}
-#logout-btn:hover{color:var(--offline);border-color:var(--offline)}
-
-/* ── Nav ───────────────────────────────────────────────── */
-#nav{grid-area:nav;background:var(--bg-dark);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:10px 8px;gap:3px}
-.ni{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:9px;cursor:pointer;color:var(--text-dim);font-size:13px;font-weight:500;transition:background var(--tr),color var(--tr);user-select:none}
-.ni:hover{background:var(--bg-mid);color:var(--text)}
-.ni.active{background:var(--accent);color:#fff}
-.ni-icon{font-size:17px;width:20px;text-align:center;flex-shrink:0}
-
-/* ── Main ──────────────────────────────────────────────── */
-#main{grid-area:main;overflow-y:auto;padding:22px;background:var(--bg-deep)}
-.page{display:none}.page.active{display:block}
-
-/* ── Cards ─────────────────────────────────────────────── */
-.card{background:var(--bg-dark);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:14px}
-
-/* ── Post create ───────────────────────────────────────── */
-.post-create{background:var(--bg-dark);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:20px}
-.post-create-top{display:flex;gap:12px;align-items:flex-start}
-.pav{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#4f46e5,#7c6af7);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0;overflow:hidden}
-.pav img{width:100%;height:100%;object-fit:cover;border-radius:50%}
-#post-inp{flex:1;padding:10px 14px;background:var(--bg-mid);border:1px solid var(--border);border-radius:12px;color:var(--text);font-size:14px;outline:none;resize:none;transition:border-color var(--tr);font-family:inherit}
-#post-inp:focus{border-color:var(--accent)}
-.post-bar{display:flex;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);align-items:center}
-.pbar-btn{display:flex;align-items:center;gap:6px;padding:6px 12px;border:none;background:transparent;color:var(--text-dim);font-size:13px;cursor:pointer;border-radius:8px;transition:background var(--tr),color var(--tr)}
-.pbar-btn:hover{background:var(--bg-mid);color:var(--text)}
-
-/* ── Post card ─────────────────────────────────────────── */
-.post-card{background:var(--bg-dark);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:13px}
-.post-head{display:flex;align-items:center;gap:10px;margin-bottom:12px}
-.post-meta{flex:1}
-.post-author{font-size:14px;font-weight:700;cursor:pointer}
-.post-author:hover{color:var(--accent)}
-.post-time{font-size:11px;color:var(--text-dim)}
-.post-body{font-size:14px;line-height:1.6;white-space:pre-wrap;word-break:break-word;margin-bottom:10px}
-.post-img{width:100%;max-height:400px;object-fit:cover;border-radius:9px;margin-bottom:10px}
-.post-foot{display:flex;gap:8px;padding-top:10px;border-top:1px solid var(--border)}
-.post-btn{display:flex;align-items:center;gap:5px;padding:5px 12px;border:none;background:transparent;color:var(--text-dim);font-size:12px;cursor:pointer;border-radius:8px;transition:background var(--tr),color var(--tr)}
-.post-btn:hover{background:var(--bg-mid);color:var(--accent)}
-.comments-sec{margin-top:12px;border-top:1px solid var(--border);padding-top:12px}
-.comment{display:flex;gap:8px;margin-bottom:9px}
-.comment-bubble{background:var(--bg-mid);border-radius:10px;padding:8px 12px;flex:1}
-.comment-author{font-size:11px;font-weight:700;margin-bottom:2px;color:var(--accent)}
-.comment-text{font-size:13px;line-height:1.5}
-.cin-row{display:flex;gap:8px;margin-top:8px}
-.cin{flex:1;padding:7px 12px;background:var(--bg-mid);border:1px solid var(--border);border-radius:20px;color:var(--text);font-size:13px;outline:none;transition:border-color var(--tr)}
-.cin:focus{border-color:var(--accent)}
-
-/* ── Profile ───────────────────────────────────────────── */
-.profile-cover{height:140px;background:linear-gradient(135deg,#1e1b4b,#312e81,#4338ca);border-radius:var(--radius) var(--radius) 0 0}
-.profile-card{background:var(--bg-dark);border:1px solid var(--border);border-radius:0 0 var(--radius) var(--radius);padding:0 20px 20px;margin-bottom:16px}
-.p-info{display:flex;gap:14px;align-items:flex-end}
-.p-big-av{width:76px;height:76px;border-radius:50%;background:linear-gradient(135deg,#4f46e5,#7c6af7);display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:700;border:3px solid var(--bg-dark);margin-top:-38px;flex-shrink:0;overflow:hidden}
-.p-big-av img{width:100%;height:100%;object-fit:cover;border-radius:50%}
-.p-name{font-size:20px;font-weight:800;margin-bottom:2px}
-.p-nick{font-size:13px;color:var(--text-dim)}
-.p-bio{font-size:13px;color:var(--text-dim);margin-top:5px}
-.p-stats{display:flex;gap:22px;margin-top:14px}
-.p-stat-num{font-size:17px;font-weight:700;color:var(--accent)}
-.p-stat-lbl{font-size:11px;color:var(--text-dim)}
-
-/* ── People ────────────────────────────────────────────── */
-.people-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:13px}
-.people-card{background:var(--bg-dark);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center}
-.people-av{width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#4f46e5,#7c6af7);display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:700;margin:0 auto 9px;overflow:hidden}
-.people-av img{width:100%;height:100%;object-fit:cover;border-radius:50%}
-.people-name{font-size:14px;font-weight:700;margin-bottom:3px}
-.people-nick{font-size:12px;color:var(--text-dim);margin-bottom:11px}
-
-/* ── Groups ────────────────────────────────────────────── */
-.groups-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:13px}
-.group-card{background:var(--bg-dark);border:1px solid var(--border);border-radius:var(--radius);padding:16px;cursor:pointer;transition:border-color var(--tr)}
-.group-card:hover{border-color:var(--accent)}
-.group-icon{width:46px;height:46px;border-radius:12px;background:linear-gradient(135deg,#4f46e5,#f472b6);display:flex;align-items:center;justify-content:center;font-size:21px;margin-bottom:9px}
-.group-name{font-size:14px;font-weight:700;margin-bottom:3px}
-.group-desc{font-size:12px;color:var(--text-dim);line-height:1.5}
-.g-big-icon{width:60px;height:60px;border-radius:14px;background:linear-gradient(135deg,#4f46e5,#f472b6);display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0}
-
-/* ── Events ────────────────────────────────────────────── */
-.event-card{background:var(--bg-mid);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px}
-.event-title{font-size:14px;font-weight:700;margin-bottom:3px}
-.event-desc{font-size:13px;color:var(--text-dim);margin-bottom:7px}
-.event-meta{font-size:12px;color:var(--text-dim)}
-.event-rsvp{display:flex;gap:8px;margin-top:10px;align-items:center}
-
-/* ── Chat ──────────────────────────────────────────────── */
-#page-chat{padding:0!important;overflow:hidden;height:calc(100vh - 48px)}
-#page-chat.active{display:grid!important;grid-template-columns:255px 1fr}
-.chat-sb{background:var(--bg-dark);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
-.chat-sb-head{padding:13px 13px 9px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-dim);border-bottom:1px solid var(--border)}
-.chat-srch{margin:8px 10px;padding:7px 12px;background:var(--bg-mid);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;outline:none;transition:border-color var(--tr)}
-.chat-srch:focus{border-color:var(--accent)}
-.chat-list{flex:1;overflow-y:auto}
-.chat-item{display:flex;align-items:center;gap:9px;padding:9px 12px;cursor:pointer;transition:background var(--tr)}
-.chat-item:hover{background:var(--bg-mid)}
-.chat-item.active{background:var(--bg-light)}
-.ci-av{width:35px;height:35px;border-radius:50%;background:linear-gradient(135deg,#4f46e5,#7c6af7);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;position:relative;overflow:hidden}
-.ci-av img{width:100%;height:100%;object-fit:cover;border-radius:50%}
-.pdot{width:9px;height:9px;border-radius:50%;border:2px solid var(--bg-dark);position:absolute;bottom:0;right:0;background:var(--offline)}
-.pdot.on{background:var(--online)}
-.ci-info{flex:1;min-width:0}
-.ci-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ci-last{font-size:11px;color:var(--text-dim)}
-.ubadge{background:var(--accent);color:#fff;border-radius:10px;font-size:10px;font-weight:700;padding:2px 6px}
-.chat-win{display:flex;flex-direction:column;overflow:hidden;background:var(--bg-deep)}
-.cwh{padding:11px 17px;background:var(--bg-dark);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:11px}
-#cwp-av{width:35px;height:35px;border-radius:50%;background:linear-gradient(135deg,#4f46e5,#7c6af7);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;overflow:hidden;flex-shrink:0}
-#cwp-av img{width:100%;height:100%;object-fit:cover;border-radius:50%}
-#cwp-name{font-size:14px;font-weight:700}
-#cwp-status{font-size:11px;color:var(--text-dim)}
-.chat-no{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text-dim);gap:10px}
-.chat-no .bi{font-size:50px}
-#msgs{flex:1;overflow-y:auto;padding:15px 17px;display:flex;flex-direction:column;gap:5px}
-.mr{display:flex}
-.mr.mine{justify-content:flex-end}
-.mb{max-width:65%;padding:9px 13px;border-radius:18px;font-size:14px;line-height:1.5;word-break:break-word}
-.mr.mine .mb{background:var(--bubble-me);border-bottom-right-radius:4px}
-.mr.theirs .mb{background:var(--bubble-them);border-bottom-left-radius:4px}
-.mt{font-size:10px;color:var(--text-dim);margin-top:2px;text-align:right}
-.mr.theirs .mt{text-align:left}
-.chat-inp-bar{padding:10px 13px;background:var(--bg-dark);border-top:1px solid var(--border);display:flex;align-items:flex-end;gap:8px}
-#chat-ta{flex:1;padding:9px 13px;background:var(--bg-mid);border:1px solid var(--border);border-radius:20px;color:var(--text);font-size:14px;outline:none;resize:none;max-height:110px;transition:border-color var(--tr);font-family:inherit;line-height:1.4}
-#chat-ta:focus{border-color:var(--accent)}
-#chat-send{width:37px;height:37px;border:none;border-radius:50%;background:var(--accent);color:#fff;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:background var(--tr);flex-shrink:0}
-#chat-send:hover{background:var(--accent-h)}
-#chat-send:disabled{opacity:.4;cursor:not-allowed}
-
-/* ── Notifications ─────────────────────────────────────── */
-.notif-item{display:flex;align-items:flex-start;gap:12px;padding:12px;background:var(--bg-dark);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:9px}
-.notif-item.unread{border-left:3px solid var(--accent)}
-.notif-icon-big{font-size:20px;flex-shrink:0;margin-top:1px}
-.notif-text{flex:1;font-size:13px;line-height:1.5}
-.notif-time{font-size:11px;color:var(--text-dim);margin-top:3px}
-
-/* ── Layout helpers ────────────────────────────────────── */
-.page-title{font-size:19px;font-weight:800;margin-bottom:17px;display:flex;align-items:center;gap:9px}
-.sec-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:13px}
-.tabs{display:flex;gap:3px;margin-bottom:17px;border-bottom:1px solid var(--border)}
-.tab{padding:8px 15px;border:none;background:transparent;color:var(--text-dim);font-size:13px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color var(--tr),border-color var(--tr)}
-.tab.active{color:var(--accent);border-color:var(--accent)}
-.tab-panel{display:none}.tab-panel.active{display:block}
-.tag{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600;background:var(--bg-mid);color:var(--text-dim)}
-.tag.going{background:#14532d;color:#86efac}
-.tag.not-going{background:#7f1d1d;color:#fca5a5}
-.tag.accepted{background:#14532d;color:#86efac}
-.tag.member{background:#1e3a5f;color:#93c5fd}
-.tag.owner{background:#3b1d6e;color:#c4b5fd}
-.spinner{display:inline-block;width:15px;height:15px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-.loading{display:flex;justify-content:center;padding:24px;color:var(--text-dim);gap:10px;align-items:center;font-size:13px}
-.empty{text-align:center;padding:36px 20px;color:var(--text-dim)}
-.empty .ei{font-size:38px;margin-bottom:9px}
-</style>
+<link rel="stylesheet" href="css/styles.css"/>
 </head>
 <body>
 
@@ -232,17 +14,17 @@ img{max-width:100%;border-radius:8px;object-fit:cover}
 <!-- LOGIN -->
 <div id="login-screen">
   <div class="login-card">
-    <h1>🌐 Social Network</h1>
+    <h1>&#127760; Social Network</h1>
     <p class="sub">Desktop App</p>
     <div class="fg"><label>Email</label><input type="email" id="lei" placeholder="you@example.com" autocomplete="email"/></div>
     <div class="fg"><label>Password</label>
       <div style="position:relative">
-        <input type="password" id="lpw" placeholder="••••••••" autocomplete="current-password" style="padding-right:40px"/>
-        <button type="button" id="tog-pw" class="toggle-pw">👁</button>
+        <input type="password" id="lpw" placeholder="password" autocomplete="current-password" style="padding-right:40px"/>
+        <button type="button" id="tog-pw" class="toggle-pw">&#128065;</button>
       </div>
     </div>
     <button class="btn btn-primary" id="login-btn" style="width:100%;margin-top:4px">Sign In</button>
-    <button class="btn btn-secondary" id="reg-btn" style="width:100%;margin-top:9px">No account? Register →</button>
+    <button class="btn btn-secondary" id="reg-btn" style="width:100%;margin-top:9px">No account? Register</button>
     <div id="login-err"></div>
   </div>
 </div>
@@ -251,20 +33,20 @@ img{max-width:100%;border-radius:8px;object-fit:cover}
 <div id="app" class="hidden">
   <header id="topbar">
     <div class="brand">Social <span>Network</span></div>
-    <input class="tb-search" id="tb-search" placeholder="🔍 Search…" autocomplete="off"/>
-    <button id="notif-btn" title="Notifications">🔔<span id="notif-badge"></span></button>
+    <input class="tb-search" id="tb-search" placeholder="Search" autocomplete="off"/>
+    <button id="notif-btn" title="Notifications">&#128276;<span id="notif-badge"></span></button>
     <div id="conn-dot" title="WS"></div>
-    <div class="tb-user" id="tb-user-btn"><div class="tb-av" id="tb-av">?</div><span id="tb-name">…</span></div>
+    <div class="tb-user" id="tb-user-btn"><div class="tb-av" id="tb-av">?</div><span id="tb-name">...</span></div>
     <button id="logout-btn">Logout</button>
   </header>
 
   <nav id="nav">
-    <div class="ni active" data-page="feed"><span class="ni-icon">🏠</span> Feed</div>
-    <div class="ni" data-page="profile"><span class="ni-icon">👤</span> Profile</div>
-    <div class="ni" data-page="people"><span class="ni-icon">👥</span> People</div>
-    <div class="ni" data-page="groups"><span class="ni-icon">🏛️</span> Groups</div>
-    <div class="ni" data-page="chat"><span class="ni-icon">💬</span> Chat</div>
-    <div class="ni" data-page="notifications"><span class="ni-icon">🔔</span> Notifications</div>
+    <div class="ni active" data-page="feed"><span class="ni-icon">&#127968;</span> Feed</div>
+    <div class="ni" data-page="profile"><span class="ni-icon">&#128100;</span> Profile</div>
+    <div class="ni" data-page="people"><span class="ni-icon">&#128101;</span> People</div>
+    <div class="ni" data-page="groups"><span class="ni-icon">&#127963;</span> Groups</div>
+    <div class="ni" data-page="chat"><span class="ni-icon">&#128172;</span> Chat</div>
+    <div class="ni" data-page="notifications"><span class="ni-icon">&#128276;</span> Notifications</div>
   </nav>
 
   <div id="main">
@@ -278,16 +60,16 @@ img{max-width:100%;border-radius:8px;object-fit:cover}
         </div>
         <div id="post-img-prev" class="hidden" style="margin-top:10px;position:relative">
           <img id="prev-img" src="" alt="" style="max-height:200px"/>
-          <button id="rm-img-btn" style="position:absolute;top:5px;right:5px;background:#0009;border:none;border-radius:50%;width:24px;height:24px;color:#fff;cursor:pointer;font-size:13px">✕</button>
+          <button id="rm-img-btn" style="position:absolute;top:5px;right:5px;background:#0009;border:none;border-radius:50%;width:24px;height:24px;color:#fff;cursor:pointer;font-size:13px">X</button>
         </div>
         <div class="post-bar">
-          <button class="pbar-btn" id="attach-btn">📷 Photo</button>
+          <button class="pbar-btn" id="attach-btn">&#128247; Photo</button>
           <input type="file" id="post-file" accept="image/*" style="display:none"/>
           <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
             <select id="post-vis" style="padding:5px 10px;background:var(--bg-mid);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;outline:none">
-              <option value="public">🌍 Public</option>
-              <option value="followers">👥 Followers</option>
-              <option value="private">🔒 Private</option>
+              <option value="public">&#127757; Public</option>
+              <option value="followers">&#128101; Followers</option>
+              <option value="private">&#128274; Private</option>
             </select>
             <button class="btn btn-primary btn-sm" id="post-submit">Post</button>
           </div>
@@ -303,13 +85,13 @@ img{max-width:100%;border-radius:8px;object-fit:cover}
         <div class="p-info">
           <div class="p-big-av" id="p-big-av">?</div>
           <div style="flex:1;padding-bottom:4px">
-            <div class="p-name" id="p-name">…</div>
+            <div class="p-name" id="p-name">...</div>
             <div class="p-nick" id="p-nick"></div>
             <div class="p-bio" id="p-bio"></div>
           </div>
           <div style="display:flex;gap:8px;padding-bottom:4px">
-            <button class="btn btn-secondary btn-sm" id="edit-p-btn">✏️ Edit</button>
-            <button class="btn btn-secondary btn-sm" id="priv-btn">🔒 Privacy</button>
+            <button class="btn btn-secondary btn-sm" id="edit-p-btn">Edit</button>
+            <button class="btn btn-secondary btn-sm" id="priv-btn">&#128274; Privacy</button>
           </div>
         </div>
         <div class="p-stats">
@@ -330,8 +112,8 @@ img{max-width:100%;border-radius:8px;object-fit:cover}
 
     <!-- PEOPLE -->
     <div class="page" id="page-people">
-      <div class="page-title"><span>👥</span> People</div>
-      <input id="ppl-srch" style="width:100%;max-width:320px;padding:9px 13px;background:var(--bg-mid);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;outline:none;margin-bottom:17px;display:block;transition:border-color var(--tr)" placeholder="🔍 Search by name…" autocomplete="off"/>
+      <div class="page-title"><span>&#128101;</span> People</div>
+      <input id="ppl-srch" style="width:100%;max-width:320px;padding:9px 13px;background:var(--bg-mid);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;outline:none;margin-bottom:17px;display:block;transition:border-color var(--tr)" placeholder="Search by name..." autocomplete="off"/>
       <div class="people-grid" id="people-grid"></div>
     </div>
 
@@ -339,7 +121,7 @@ img{max-width:100%;border-radius:8px;object-fit:cover}
     <div class="page" id="page-groups">
       <div id="g-list-view">
         <div class="sec-hdr">
-          <div class="page-title" style="margin-bottom:0"><span>🏛️</span> Groups</div>
+          <div class="page-title" style="margin-bottom:0"><span>&#127963;</span> Groups</div>
           <button class="btn btn-primary btn-sm" id="new-grp-btn">+ Create</button>
         </div>
         <div class="tabs" style="margin-top:14px">
@@ -350,7 +132,7 @@ img{max-width:100%;border-radius:8px;object-fit:cover}
         <div class="tab-panel" id="gt-mine"><div class="groups-grid" id="gg-mine"></div></div>
       </div>
       <div id="g-detail-view" class="hidden">
-        <button class="btn btn-secondary btn-sm" id="back-grp-btn" style="margin-bottom:15px">← Back</button>
+        <button class="btn btn-secondary btn-sm" id="back-grp-btn" style="margin-bottom:15px">Back</button>
         <div id="g-detail-content"></div>
       </div>
     </div>
@@ -361,7 +143,7 @@ img{max-width:100%;border-radius:8px;object-fit:cover}
     <!-- NOTIFICATIONS -->
     <div class="page" id="page-notifications">
       <div class="sec-hdr">
-        <div class="page-title" style="margin-bottom:0"><span>🔔</span> Notifications</div>
+        <div class="page-title" style="margin-bottom:0"><span>&#128276;</span> Notifications</div>
         <button class="btn btn-secondary btn-sm" id="mark-all-btn">Mark all read</button>
       </div>
       <div id="notif-list"></div>
@@ -370,12 +152,10 @@ img{max-width:100%;border-radius:8px;object-fit:cover}
   </div>
 </div>
 
-<!-- MODALS -->
-
-<!-- Edit Profile -->
+<!-- Edit Profile Modal -->
 <div id="m-edit-p" class="modal-backdrop hidden">
   <div class="modal">
-    <button class="modal-close" data-close="m-edit-p">✕</button>
+    <button class="modal-close" data-close="m-edit-p">X</button>
     <h2>Edit Profile</h2>
     <div class="fg"><label>First Name</label><input id="ep-fn" type="text"/></div>
     <div class="fg"><label>Last Name</label><input id="ep-ln" type="text"/></div>
@@ -389,10 +169,10 @@ img{max-width:100%;border-radius:8px;object-fit:cover}
   </div>
 </div>
 
-<!-- Create Group -->
+<!-- Create Group Modal -->
 <div id="m-cg" class="modal-backdrop hidden">
   <div class="modal">
-    <button class="modal-close" data-close="m-cg">✕</button>
+    <button class="modal-close" data-close="m-cg">X</button>
     <h2>Create Group</h2>
     <div class="fg"><label>Name</label><input id="cg-name" type="text" placeholder="My Group"/></div>
     <div class="fg"><label>Description</label><textarea id="cg-desc"></textarea></div>
@@ -403,10 +183,10 @@ img{max-width:100%;border-radius:8px;object-fit:cover}
   </div>
 </div>
 
-<!-- Create Event -->
+<!-- Create Event Modal -->
 <div id="m-ce" class="modal-backdrop hidden">
   <div class="modal">
-    <button class="modal-close" data-close="m-ce">✕</button>
+    <button class="modal-close" data-close="m-ce">X</button>
     <h2>Create Event</h2>
     <input type="hidden" id="ce-gid"/>
     <div class="fg"><label>Title</label><input id="ce-title" type="text"/></div>
@@ -422,704 +202,20 @@ img{max-width:100%;border-radius:8px;object-fit:cover}
 <!-- User Profile Modal -->
 <div id="m-user" class="modal-backdrop hidden">
   <div class="modal" style="width:480px">
-    <button class="modal-close" data-close="m-user">✕</button>
+    <button class="modal-close" data-close="m-user">X</button>
     <div id="m-user-body"></div>
   </div>
 </div>
 
-<script>
-'use strict';
-const API    = 'http://localhost:8081';
-const WS_URL = 'ws://localhost:8081/api/ws';
-
-let me = null, tok = localStorage.getItem('sn_tok')||'';
-let ws = null, wsOn = false;
-let onlineIDs = new Set(), onlineTypes = {};
-let users = [], unreadDM = {}, cachedMsgs = {};
-let activeChatID = null, postFile = null, notifCnt = 0;
-
-const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-const dname = u => u?(u.nickname||`${u.first_name||''} ${u.last_name||''}`.trim()||u.email||'User '+u.id):'Unknown';
-const inits = u => dname(u).slice(0,2).toUpperCase();
-const fmt  = ts => ts?new Date(ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'';
-const fmtD = ts => ts?new Date(ts).toLocaleDateString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}):'';
-const avSrc= u => u&&u.avatar?`${API}/uploads/${u.avatar}`:null;
-
-let _tt;
-function toast(msg,dur=3000){
-  const el=document.getElementById('toast');
-  el.textContent=msg;el.classList.remove('hidden');el.style.opacity='1';
-  clearTimeout(_tt);_tt=setTimeout(()=>{el.style.opacity='0';setTimeout(()=>el.classList.add('hidden'),300);},dur);
-}
-function setAv(el,u){
-  const s=avSrc(u);
-  if(s) el.innerHTML=`<img src="${s}" alt=""/>`;
-  else el.textContent=inits(u);
-}
-
-function hdrs(x={}){const h={'Content-Type':'application/json',...x};if(tok)h['X-Session-ID']=tok;return h;}
-function fo(o={}){return{credentials:'include',...o,headers:hdrs(o.headers)};}
-async function api(p,o={}){
-  const r=await fetch(API+p,fo(o));
-  if(!r.ok){const t=await r.text();throw new Error(t||r.statusText);}
-  const ct=r.headers.get('content-type')||'';
-  return ct.includes('json')?r.json():r.text();
-}
-async function apiForm(p,fd){
-  const h={};if(tok)h['X-Session-ID']=tok;
-  const r=await fetch(API+p,{method:'POST',credentials:'include',headers:h,body:fd});
-  if(!r.ok){const t=await r.text();throw new Error(t||r.statusText);}
-  return r.json();
-}
-
-async function doLogin(){
-  const email=document.getElementById('lei').value.trim();
-  const pw=document.getElementById('lpw').value;
-  const err=document.getElementById('login-err'),btn=document.getElementById('login-btn');
-  err.textContent='';
-  if(!email||!pw){err.textContent='Fill all fields.';return;}
-  btn.disabled=true;btn.textContent='…';
-  try{
-    const d=await api('/api/auth/login',{method:'POST',body:JSON.stringify({email,password:pw})});
-    if(d.session_id){tok=d.session_id;localStorage.setItem('sn_tok',tok);}
-    me=await api('/api/me');
-    if(window.electronAPI)await window.electronAPI.saveSession({userId:me.id,email:me.email});
-    await startApp();
-  }catch(e){err.textContent=e.message;}
-  finally{btn.disabled=false;btn.textContent='Sign In';}
-}
-async function doLogout(){
-  try{await api('/api/auth/logout',{method:'POST'});}catch(_){}
-  tok='';localStorage.removeItem('sn_tok');
-  if(window.electronAPI)await window.electronAPI.clearSession();
-  me=null;if(ws){ws.close();ws=null;}
-  document.getElementById('app').classList.add('hidden');
-  document.getElementById('login-screen').classList.remove('hidden');
-  document.getElementById('lei').value='';document.getElementById('lpw').value='';
-}
-
-function connectWS(){
-  if(ws){try{ws.close();}catch(_){}}
-  const url=`${WS_URL}?client=electron${tok?'&session_id='+encodeURIComponent(tok):''}`;
-  ws=new WebSocket(url);
-  ws.onopen=()=>{wsOn=true;setDot(true);refreshOnline();};
-  ws.onclose=()=>{wsOn=false;setDot(false);if(me)setTimeout(()=>{if(!wsOn)connectWS();},5000);};
-  ws.onerror=()=>ws.close();
-  ws.onmessage=e=>{try{handleWS(JSON.parse(e.data));}catch(_){}};
-}
-function setDot(on){document.getElementById('conn-dot').className=on?'on':'';}
-function handleWS(msg){
-  if(msg.type==='presence_online'){onlineIDs.add(msg.sender_id);onlineTypes[msg.sender_id]=msg.client_type||'web';reChatList();}
-  else if(msg.type==='presence_offline'){onlineIDs.delete(msg.sender_id);delete onlineTypes[msg.sender_id];reChatList();}
-  else if(msg.type==='chat_message'){
-    const pid=msg.sender_id;
-    if(!cachedMsgs[pid])cachedMsgs[pid]=[];
-    cachedMsgs[pid].push(msg);
-    if(activeChatID===pid){appendMsg(msg,false);scrollMsgs();}
-    else{unreadDM[pid]=(unreadDM[pid]||0)+1;reChatList();}
-    const u=users.find(x=>x.id===pid);
-    if(window.electronAPI)window.electronAPI.notify(dname(u||{id:pid}),msg.content);
-  }
-  else if(msg.type==='group_message'){
-    const k='g:'+msg.group_id;
-    if(!cachedMsgs[k])cachedMsgs[k]=[];
-    cachedMsgs[k].push(msg);
-    if(activeChatID===k){appendMsg(msg,false);scrollMsgs();}
-  }
-  else if(msg.type==='notification'){notifCnt++;updBadge();toast('🔔 '+(msg.content||'New notification'));}
-}
-async function refreshOnline(){
-  try{
-    const e=await api('/api/online-users');
-    onlineIDs=new Set();onlineTypes={};
-    (e||[]).forEach(x=>{const id=Number(x.id);onlineIDs.add(id);onlineTypes[id]=x.client_type||'web';});
-    reChatList();
-  }catch(_){}
-}
-
-async function startApp(){
-  document.getElementById('login-screen').classList.add('hidden');
-  document.getElementById('app').classList.remove('hidden');
-  setAv(document.getElementById('tb-av'),me);
-  document.getElementById('tb-name').textContent=dname(me);
-  try{users=await api('/api/users');}catch(_){users=[];}
-  buildChatLayout();reChatList();connectWS();
-  gotoPage('feed');
-  setInterval(async()=>{try{const u=await api('/api/users');if(u)users=u;reChatList();}catch(_){}},60000);
-  setInterval(()=>{if(wsOn)refreshOnline();},30000);
-}
-
-function gotoPage(name){
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.ni').forEach(n=>n.classList.toggle('active',n.dataset.page===name));
-  const pg=document.getElementById('page-'+name);if(pg)pg.classList.add('active');
-  if(name==='feed')loadFeed();
-  if(name==='profile')loadProfile();
-  if(name==='people')loadPeople();
-  if(name==='groups')loadGroups();
-  if(name==='notifications')loadNotifs();
-  if(name==='chat')reChatList();
-}
-document.querySelectorAll('.ni').forEach(n=>n.addEventListener('click',()=>gotoPage(n.dataset.page)));
-
-// FEED
-async function loadFeed(){
-  const el=document.getElementById('feed-list');
-  el.innerHTML='<div class="loading"><span class="spinner"></span> Loading…</div>';
-  setAv(document.getElementById('feed-av'),me);
-  try{
-    const posts=await api('/api/posts');
-    el.innerHTML='';
-    if(!posts||!posts.length){el.innerHTML='<div class="empty"><div class="ei">📭</div>No posts yet</div>';return;}
-    posts.forEach(p=>el.appendChild(mkPost(p)));
-  }catch(e){el.innerHTML=`<div class="empty">Error: ${esc(e.message)}</div>`;}
-}
-function mkPost(p){
-  const au=users.find(u=>u.id===p.user_id)||{id:p.user_id,first_name:'User',last_name:'#'+p.user_id};
-  const s=avSrc(au);
-  const avHtml=s?`<img src="${s}" style="width:38px;height:38px;border-radius:50%;object-fit:cover" alt=""/>`:`<div class="pav">${inits(au)}</div>`;
-  const imgHtml=p.image?`<img class="post-img" src="${API}/uploads/${esc(p.image)}" alt=""/>`:'';
-  const div=document.createElement('div');
-  div.className='post-card';
-  div.innerHTML=`
-    <div class="post-head">${avHtml}
-      <div class="post-meta">
-        <div class="post-author" data-uid="${p.user_id}">${esc(dname(au))}</div>
-        <div class="post-time">${fmtD(p.created_at)}</div>
-      </div>
-    </div>
-    ${imgHtml}
-    <div class="post-body">${esc(p.content||'')}</div>
-    <div class="post-foot">
-      <button class="post-btn tc-btn">💬 Comments</button>
-      ${p.user_id===me.id?`<button class="post-btn del-post-btn" data-id="${p.id}" style="margin-left:auto;color:var(--offline)">🗑</button>`:''}
-    </div>
-    <div class="comments-sec hidden">
-      <div class="comments-body"></div>
-      <div class="cin-row">
-        <input class="cin" type="text" placeholder="Write a comment…"/>
-        <button class="btn btn-primary btn-sm send-c-btn">Send</button>
-      </div>
-    </div>`;
-  div.querySelector('.post-author').addEventListener('click',()=>openUserModal(p.user_id));
-  div.querySelector('.tc-btn').addEventListener('click',function(){
-    const sec=div.querySelector('.comments-sec');
-    const open=!sec.classList.contains('hidden');
-    sec.classList.toggle('hidden',open);
-    if(!open)loadComments(p.id,div.querySelector('.comments-body'));
-  });
-  div.querySelector('.send-c-btn').addEventListener('click',async()=>{
-    const inp=div.querySelector('.cin');const txt=inp.value.trim();if(!txt)return;
-    try{await api('/api/posts/comment',{method:'POST',body:JSON.stringify({post_id:p.id,content:txt})});inp.value='';loadComments(p.id,div.querySelector('.comments-body'));}
-    catch(e){toast(e.message);}
-  });
-  div.querySelector('.cin').addEventListener('keydown',e=>{if(e.key==='Enter')div.querySelector('.send-c-btn').click();});
-  const db=div.querySelector('.del-post-btn');
-  if(db)db.addEventListener('click',async()=>{
-    if(!confirm('Delete post?'))return;
-    try{await api('/api/posts?id='+p.id,{method:'DELETE'});div.remove();toast('Deleted');}
-    catch(e){toast(e.message);}
-  });
-  return div;
-}
-async function loadComments(postId,el){
-  el.innerHTML='<div style="color:var(--text-dim);font-size:12px;padding:4px">Loading…</div>';
-  try{
-    const cs=await api('/api/posts/comment?post_id='+postId);
-    el.innerHTML='';
-    if(!cs||!cs.length){el.innerHTML='<div style="color:var(--text-dim);font-size:12px;padding:4px">No comments</div>';return;}
-    cs.forEach(c=>{
-      const u=users.find(x=>x.id===c.user_id)||{id:c.user_id,first_name:'User',last_name:''};
-      el.insertAdjacentHTML('beforeend',`<div class="comment"><div class="comment-bubble"><div class="comment-author">${esc(dname(u))}</div><div class="comment-text">${esc(c.content)}</div></div></div>`);
-    });
-  }catch(_){}
-}
-document.getElementById('post-submit').addEventListener('click',async()=>{
-  const content=document.getElementById('post-inp').value.trim();
-  const vis=document.getElementById('post-vis').value;
-  const btn=document.getElementById('post-submit');
-  if(!content&&!postFile){toast('Write something or attach photo');return;}
-  btn.disabled=true;btn.textContent='…';
-  try{
-    let img=null;
-    if(postFile){const fd=new FormData();fd.append('image',postFile);const r=await apiForm('/api/upload',fd);img=r.filename||r.url||null;}
-    await api('/api/posts',{method:'POST',body:JSON.stringify({content,visibility:vis,image:img})});
-    document.getElementById('post-inp').value='';
-    postFile=null;
-    document.getElementById('post-img-prev').classList.add('hidden');
-    document.getElementById('prev-img').src='';
-    document.getElementById('post-file').value='';
-    toast('✅ Posted!');loadFeed();
-  }catch(e){toast(e.message);}
-  finally{btn.disabled=false;btn.textContent='Post';}
-});
-document.getElementById('attach-btn').addEventListener('click',()=>document.getElementById('post-file').click());
-document.getElementById('post-file').addEventListener('change',e=>{
-  const f=e.target.files[0];if(!f)return;
-  postFile=f;
-  document.getElementById('prev-img').src=URL.createObjectURL(f);
-  document.getElementById('post-img-prev').classList.remove('hidden');
-});
-document.getElementById('rm-img-btn').addEventListener('click',()=>{
-  postFile=null;
-  document.getElementById('post-img-prev').classList.add('hidden');
-  document.getElementById('prev-img').src='';
-  document.getElementById('post-file').value='';
-});
-
-// PROFILE
-async function loadProfile(uid){
-  const id=uid||me.id;const isMe=id===me.id;
-  try{
-    const p=await api('/api/profile?user_id='+id);
-    const u=p.user||p;
-    document.getElementById('p-name').textContent=dname(u);
-    document.getElementById('p-nick').textContent=u.nickname?'@'+u.nickname:'';
-    document.getElementById('p-bio').textContent=u.about_me||'';
-    setAv(document.getElementById('p-big-av'),u);
-    document.getElementById('st-posts').textContent=p.posts_count||0;
-    document.getElementById('st-followers').textContent=(p.followers||[]).length;
-    document.getElementById('st-following').textContent=(p.following||[]).length;
-    document.getElementById('edit-p-btn').classList.toggle('hidden',!isMe);
-    document.getElementById('priv-btn').classList.toggle('hidden',!isMe);
-    const postsEl=document.getElementById('tp-posts');
-    postsEl.innerHTML='';
-    (p.posts||[]).forEach(post=>postsEl.appendChild(mkPost(post)));
-    if(!(p.posts||[]).length)postsEl.innerHTML='<div class="empty"><div class="ei">📝</div>No posts</div>';
-    const flEl=document.getElementById('tp-followers');flEl.innerHTML='';
-    (p.followers||[]).forEach(f=>{
-      const fu=users.find(x=>x.id===f.follower_id)||{id:f.follower_id,first_name:'User',last_name:''};
-      flEl.insertAdjacentHTML('beforeend',`<div class="card" style="padding:11px;display:flex;align-items:center;gap:10px;cursor:pointer" onclick="openUserModal(${fu.id})"><div class="pav" style="width:34px;height:34px;font-size:12px">${inits(fu)}</div><div>${esc(dname(fu))}</div></div>`);
-    });
-    const fgEl=document.getElementById('tp-following');fgEl.innerHTML='';
-    (p.following||[]).forEach(f=>{
-      const fu=users.find(x=>x.id===f.followed_id)||{id:f.followed_id,first_name:'User',last_name:''};
-      fgEl.insertAdjacentHTML('beforeend',`<div class="card" style="padding:11px;display:flex;align-items:center;gap:10px;cursor:pointer" onclick="openUserModal(${fu.id})"><div class="pav" style="width:34px;height:34px;font-size:12px">${inits(fu)}</div><div>${esc(dname(fu))}</div></div>`);
-    });
-  }catch(e){toast('Profile error: '+e.message);}
-}
-document.getElementById('edit-p-btn').addEventListener('click',()=>{
-  document.getElementById('ep-fn').value=me.first_name||'';
-  document.getElementById('ep-ln').value=me.last_name||'';
-  document.getElementById('ep-nick').value=me.nickname||'';
-  document.getElementById('ep-about').value=me.about_me||'';
-  openM('m-edit-p');
-});
-document.getElementById('save-p-btn').addEventListener('click',async()=>{
-  const btn=document.getElementById('save-p-btn');btn.disabled=true;btn.textContent='…';
-  try{
-    let av=null;
-    const af=document.getElementById('ep-av-file').files[0];
-    if(af){const fd=new FormData();fd.append('image',af);const r=await apiForm('/api/upload',fd);av=r.filename||r.url||null;}
-    const body={first_name:document.getElementById('ep-fn').value.trim(),last_name:document.getElementById('ep-ln').value.trim(),nickname:document.getElementById('ep-nick').value.trim(),about_me:document.getElementById('ep-about').value.trim()};
-    if(av)body.avatar=av;
-    await api('/api/profile',{method:'PUT',body:JSON.stringify(body)});
-    me=await api('/api/me');
-    closeM('m-edit-p');toast('✅ Profile updated');
-    setAv(document.getElementById('tb-av'),me);
-    document.getElementById('tb-name').textContent=dname(me);
-    loadProfile();
-  }catch(e){toast(e.message);}
-  finally{btn.disabled=false;btn.textContent='Save';}
-});
-document.getElementById('priv-btn').addEventListener('click',async()=>{
-  try{await api('/api/profile/privacy',{method:'PUT'});me=await api('/api/me');toast('Privacy updated');loadProfile();}
-  catch(e){toast(e.message);}
-});
-document.querySelectorAll('.tab[data-tp]').forEach(t=>{
-  t.addEventListener('click',()=>{
-    t.closest('.tabs').querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
-    t.classList.add('active');
-    const id=t.dataset.tp;
-    document.querySelectorAll('#page-profile .tab-panel').forEach(p=>p.classList.toggle('active',p.id===id));
-  });
-});
-
-// PEOPLE
-async function loadPeople(filter=''){
-  const g=document.getElementById('people-grid');
-  g.innerHTML='<div class="loading"><span class="spinner"></span></div>';
-  try{users=await api('/api/users');renderPeople(filter);}
-  catch(e){g.innerHTML=`<div class="empty">Error: ${esc(e.message)}</div>`;}
-}
-function renderPeople(filter=''){
-  const g=document.getElementById('people-grid');
-  const q=filter.toLowerCase();
-  const list=users.filter(u=>u.id!==me.id&&dname(u).toLowerCase().includes(q));
-  g.innerHTML='';
-  if(!list.length){g.innerHTML='<div class="empty"><div class="ei">🔍</div>No users found</div>';return;}
-  list.forEach(u=>{
-    const s=avSrc(u);const avHtml=s?`<img src="${s}" alt=""/>`:(inits(u));
-    const on=onlineIDs.has(u.id);
-    const fl=u.follow_status==='accepted'?'Following':u.follow_status==='pending'?'Pending':'Follow';
-    const fc=u.follow_status==='accepted'?'btn-secondary':u.follow_status==='pending'?'btn-secondary':'btn-primary';
-    const card=document.createElement('div');card.className='people-card';
-    card.innerHTML=`
-      <div class="people-av">${avHtml}</div>
-      <div class="people-name">${esc(dname(u))}</div>
-      <div class="people-nick">${u.nickname?'@'+esc(u.nickname):''}</div>
-      <div style="margin-bottom:10px"><span class="tag ${on?'accepted':''}">${on?'Online':'Offline'}</span></div>
-      <div style="display:flex;gap:6px;justify-content:center">
-        <button class="btn btn-secondary btn-sm view-btn">View</button>
-        <button class="btn ${fc} btn-sm fl-btn" data-status="${u.follow_status||''}">${esc(fl)}</button>
-      </div>`;
-    card.querySelector('.view-btn').addEventListener('click',()=>openUserModal(u.id));
-    card.querySelector('.fl-btn').addEventListener('click',async function(){
-      const st=this.dataset.status;this.disabled=true;
-      try{
-        if(st==='accepted'){await api('/api/follow?followed_id='+u.id,{method:'DELETE'});toast('Unfollowed');}
-        else if(!st||st==='rejected'){await api('/api/follow',{method:'POST',body:JSON.stringify({followed_id:u.id})});toast('Request sent');}
-        loadPeople(document.getElementById('ppl-srch').value);
-      }catch(e){toast(e.message);this.disabled=false;}
-    });
-    g.appendChild(card);
-  });
-}
-document.getElementById('ppl-srch').addEventListener('input',e=>renderPeople(e.target.value));
-
-async function openUserModal(uid){
-  const el=document.getElementById('m-user-body');
-  el.innerHTML='<div class="loading"><span class="spinner"></span></div>';
-  openM('m-user');
-  try{
-    const p=await api('/api/profile?user_id='+uid);
-    const u=p.user||p;
-    const s=avSrc(u);
-    el.innerHTML=`
-      <div style="display:flex;align-items:center;gap:13px;margin-bottom:15px">
-        <div class="people-av" style="width:58px;height:58px;font-size:21px">${s?`<img src="${s}" alt=""/>`:(inits(u))}</div>
-        <div>
-          <div style="font-size:18px;font-weight:800">${esc(dname(u))}</div>
-          <div style="color:var(--text-dim);font-size:13px">${u.nickname?'@'+esc(u.nickname):''}</div>
-        </div>
-      </div>
-      ${u.about_me?`<div style="font-size:13px;color:var(--text-dim);margin-bottom:13px">${esc(u.about_me)}</div>`:''}
-      <div style="display:flex;gap:18px;margin-bottom:15px">
-        <div class="p-stat"><div class="p-stat-num">${p.posts_count||0}</div><div class="p-stat-lbl">Posts</div></div>
-        <div class="p-stat"><div class="p-stat-num">${(p.followers||[]).length}</div><div class="p-stat-lbl">Followers</div></div>
-      </div>
-      <div style="display:flex;gap:8px">
-        <button class="btn btn-primary btn-sm" id="um-msg">💬 Message</button>
-      </div>
-      <div style="margin-top:15px;font-weight:700;font-size:13px">Recent Posts</div>
-      <div id="um-posts" style="margin-top:9px"></div>`;
-    document.getElementById('um-msg').addEventListener('click',()=>{
-      closeM('m-user');gotoPage('chat');
-      const t=users.find(x=>x.id===uid);if(t)openDM(t);
-    });
-    const pe=document.getElementById('um-posts');
-    (p.posts||[]).slice(0,4).forEach(post=>pe.appendChild(mkPost(post)));
-    if(!(p.posts||[]).length)pe.innerHTML='<div style="color:var(--text-dim);font-size:13px">No posts</div>';
-  }catch(e){el.innerHTML=`<div class="empty">Error: ${esc(e.message)}</div>`;}
-}
-
-// GROUPS
-async function loadGroups(){
-  document.getElementById('g-list-view').classList.remove('hidden');
-  document.getElementById('g-detail-view').classList.add('hidden');
-  const all=document.getElementById('gg-all'),mine=document.getElementById('gg-mine');
-  all.innerHTML='<div class="loading"><span class="spinner"></span></div>';mine.innerHTML='';
-  try{
-    const gs=await api('/api/groups');
-    all.innerHTML='';mine.innerHTML='';
-    if(!gs||!gs.length){all.innerHTML='<div class="empty"><div class="ei">🏛️</div>No groups</div>';return;}
-    gs.forEach(g=>{
-      const c=mkGroupCard(g);all.appendChild(c);
-      if(g.is_member||g.creator_id===me.id){const c2=mkGroupCard(g);mine.appendChild(c2);}
-    });
-    if(!mine.children.length)mine.innerHTML='<div class="empty"><div class="ei">👤</div>Not a member of any group</div>';
-  }catch(e){all.innerHTML=`<div class="empty">Error: ${esc(e.message)}</div>`;}
-}
-function mkGroupCard(g){
-  const div=document.createElement('div');div.className='group-card';
-  div.innerHTML=`<div class="group-icon">🏛️</div><div class="group-name">${esc(g.title||g.name||'Group #'+g.id)}</div><div class="group-desc">${esc(g.description||'')}</div><div style="margin-top:9px;display:flex;gap:5px">${g.is_member?'<span class="tag member">Member</span>':''}${g.creator_id===me.id?'<span class="tag owner">Owner</span>':''}</div>`;
-  div.addEventListener('click',()=>openGroup(g.id));
-  return div;
-}
-async function openGroup(gid){
-  document.getElementById('g-list-view').classList.add('hidden');
-  document.getElementById('g-detail-view').classList.remove('hidden');
-  const el=document.getElementById('g-detail-content');
-  el.innerHTML='<div class="loading"><span class="spinner"></span> Loading…</div>';
-  try{
-    const [g,members,events]=await Promise.all([
-      api('/api/groups/detail?group_id='+gid),
-      api('/api/groups/members?group_id='+gid),
-      api('/api/groups/events?group_id='+gid),
-    ]);
-    const title=g.title||g.name||'Group #'+gid;
-    const isMember=(members||[]).some(m=>m.user_id===me.id&&m.status==='accepted');
-    const isOwner=g.creator_id===me.id;
-    el.innerHTML=`
-      <div style="display:flex;align-items:center;gap:13px;margin-bottom:18px;flex-wrap:wrap">
-        <div class="g-big-icon">🏛️</div>
-        <div style="flex:1">
-          <div style="font-size:19px;font-weight:800">${esc(title)}</div>
-          <div style="color:var(--text-dim);font-size:13px;margin-top:2px">${esc(g.description||'')}</div>
-          <div style="margin-top:7px;display:flex;gap:6px">${isMember?'<span class="tag member">Member</span>':''}${isOwner?'<span class="tag owner">Owner</span>':''}</div>
-        </div>
-        <div style="display:flex;gap:7px;flex-wrap:wrap">
-          ${!isMember&&!isOwner?`<button class="btn btn-primary btn-sm" id="join-g-btn">Join</button>`:''}
-          ${isMember||isOwner?`<button class="btn btn-secondary btn-sm" id="g-chat-btn">💬 Chat</button>`:''}
-          ${isOwner?`<button class="btn btn-primary btn-sm" id="new-evt-btn">+ Event</button>`:''}
-        </div>
-      </div>
-      <div class="tabs">
-        <button class="tab active" data-gi="gi-events">Events</button>
-        <button class="tab" data-gi="gi-members">Members</button>
-        ${isOwner?'<button class="tab" data-gi="gi-invite">Invite</button>':''}
-      </div>
-      <div class="tab-panel active" id="gi-events"><div id="evts-list"></div></div>
-      <div class="tab-panel" id="gi-members"><div id="mems-list"></div></div>
-      ${isOwner?'<div class="tab-panel" id="gi-invite"><div id="inv-list"></div></div>':''}`;
-
-    el.querySelectorAll('.tab[data-gi]').forEach(t=>{
-      t.addEventListener('click',()=>{
-        el.querySelectorAll('.tab[data-gi]').forEach(x=>x.classList.remove('active'));
-        t.classList.add('active');
-        el.querySelectorAll('.tab-panel').forEach(p=>p.classList.toggle('active',p.id===t.dataset.gi));
-      });
-    });
-
-    const evEl=document.getElementById('evts-list');
-    if(!events||!events.length)evEl.innerHTML='<div class="empty"><div class="ei">📅</div>No events</div>';
-    else events.forEach(ev=>{
-      const myR=(ev.responses||[]).find(r=>r.user_id===me.id);
-      evEl.insertAdjacentHTML('beforeend',`
-        <div class="event-card">
-          <div class="event-title">${esc(ev.title)}</div>
-          <div class="event-desc">${esc(ev.description||'')}</div>
-          <div class="event-meta">📅 ${fmtD(ev.event_date||ev.date)}</div>
-          ${isMember||isOwner?`<div class="event-rsvp">
-            <button class="btn btn-sm ${myR&&myR.status==='going'?'btn-primary':'btn-secondary'} rsvp-btn" data-eid="${ev.id}" data-opt="going">✅ Going</button>
-            <button class="btn btn-sm ${myR&&myR.status==='not_going'?'btn-danger':'btn-secondary'} rsvp-btn" data-eid="${ev.id}" data-opt="not_going">❌ Not Going</button>
-            <span style="font-size:12px;color:var(--text-dim)">${(ev.responses||[]).filter(r=>r.status==='going').length} going</span>
-          </div>`:''}
-        </div>`);
-    });
-    evEl.querySelectorAll('.rsvp-btn').forEach(b=>b.addEventListener('click',async()=>{
-      try{await api('/api/groups/events/respond',{method:'POST',body:JSON.stringify({event_id:Number(b.dataset.eid),status:b.dataset.opt})});toast('RSVP updated');openGroup(gid);}
-      catch(e){toast(e.message);}
-    }));
-
-    const memEl=document.getElementById('mems-list');
-    (members||[]).filter(m=>m.status==='accepted').forEach(m=>{
-      const u=users.find(x=>x.id===m.user_id)||{id:m.user_id,first_name:'User',last_name:''};
-      memEl.insertAdjacentHTML('beforeend',`<div style="display:flex;align-items:center;gap:9px;padding:9px;background:var(--bg-mid);border-radius:9px;margin-bottom:7px"><div class="pav" style="width:32px;height:32px;font-size:11px">${inits(u)}</div><div style="flex:1">${esc(dname(u))}</div>${m.user_id===g.creator_id?'<span class="tag owner">Owner</span>':''}</div>`);
-    });
-    if(isOwner){
-      const pending=(members||[]).filter(m=>m.status==='pending');
-      if(pending.length){
-        memEl.insertAdjacentHTML('beforeend','<div style="margin-top:13px;font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px">Pending Requests</div>');
-        pending.forEach(m=>{
-          const u=users.find(x=>x.id===m.user_id)||{id:m.user_id,first_name:'User',last_name:''};
-          memEl.insertAdjacentHTML('beforeend',`<div style="display:flex;align-items:center;gap:9px;padding:9px;background:var(--bg-mid);border-radius:9px;margin-top:7px"><div class="pav" style="width:32px;height:32px;font-size:11px">${inits(u)}</div><div style="flex:1">${esc(dname(u))}</div><button class="btn btn-primary btn-sm acc-m" data-uid="${m.user_id}">Accept</button><button class="btn btn-danger btn-sm rej-m" data-uid="${m.user_id}">Reject</button></div>`);
-        });
-        memEl.querySelectorAll('.acc-m').forEach(b=>b.addEventListener('click',async()=>{try{await api('/api/groups/respond',{method:'POST',body:JSON.stringify({group_id:gid,user_id:Number(b.dataset.uid),accept:true})});openGroup(gid);}catch(e){toast(e.message);}}));
-        memEl.querySelectorAll('.rej-m').forEach(b=>b.addEventListener('click',async()=>{try{await api('/api/groups/respond',{method:'POST',body:JSON.stringify({group_id:gid,user_id:Number(b.dataset.uid),accept:false})});openGroup(gid);}catch(e){toast(e.message);}}));
-      }
-    }
-
-    if(isOwner){
-      const invEl=document.getElementById('inv-list');
-      users.filter(u=>u.id!==me.id&&!(members||[]).some(m=>m.user_id===u.id&&m.status==='accepted')).forEach(u=>{
-        invEl.insertAdjacentHTML('beforeend',`<div style="display:flex;align-items:center;gap:9px;padding:9px;background:var(--bg-mid);border-radius:9px;margin-bottom:7px"><div class="pav" style="width:32px;height:32px;font-size:11px">${inits(u)}</div><div style="flex:1">${esc(dname(u))}</div><button class="btn btn-primary btn-sm inv-btn" data-uid="${u.id}">Invite</button></div>`);
-      });
-      invEl.querySelectorAll('.inv-btn').forEach(b=>b.addEventListener('click',async()=>{
-        try{await api('/api/groups/invite',{method:'POST',body:JSON.stringify({group_id:gid,user_id:Number(b.dataset.uid)})});b.textContent='Invited';b.disabled=true;toast('Invited!');}
-        catch(e){toast(e.message);}
-      }));
-    }
-
-    const jBtn=document.getElementById('join-g-btn');
-    if(jBtn)jBtn.addEventListener('click',async()=>{try{await api('/api/groups/join',{method:'POST',body:JSON.stringify({group_id:gid})});toast('Request sent');openGroup(gid);}catch(e){toast(e.message);}});
-    const gcBtn=document.getElementById('g-chat-btn');
-    if(gcBtn)gcBtn.addEventListener('click',()=>{gotoPage('chat');openGroupChat(gid,title);});
-    const neBtn=document.getElementById('new-evt-btn');
-    if(neBtn)neBtn.addEventListener('click',()=>{document.getElementById('ce-gid').value=gid;document.getElementById('ce-title').value='';document.getElementById('ce-desc').value='';document.getElementById('ce-date').value='';openM('m-ce');});
-  }catch(e){el.innerHTML=`<div class="empty">Error: ${esc(e.message)}</div>`;}
-}
-document.getElementById('new-grp-btn').addEventListener('click',()=>{document.getElementById('cg-name').value='';document.getElementById('cg-desc').value='';openM('m-cg');});
-document.getElementById('cg-submit').addEventListener('click',async()=>{
-  const n=document.getElementById('cg-name').value.trim(),d=document.getElementById('cg-desc').value.trim();
-  if(!n){toast('Enter group name');return;}
-  try{await api('/api/groups',{method:'POST',body:JSON.stringify({title:n,description:d})});closeM('m-cg');toast('✅ Group created');loadGroups();}
-  catch(e){toast(e.message);}
-});
-document.getElementById('ce-submit').addEventListener('click',async()=>{
-  const gid=Number(document.getElementById('ce-gid').value);
-  const t=document.getElementById('ce-title').value.trim(),d=document.getElementById('ce-desc').value.trim(),dt=document.getElementById('ce-date').value;
-  if(!t||!dt){toast('Fill title and date');return;}
-  try{await api('/api/groups/events',{method:'POST',body:JSON.stringify({group_id:gid,title:t,description:d,event_date:dt})});closeM('m-ce');toast('✅ Event created');openGroup(gid);}
-  catch(e){toast(e.message);}
-});
-document.querySelectorAll('.tab[data-gt]').forEach(t=>{
-  t.addEventListener('click',()=>{
-    t.closest('.tabs').querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
-    t.classList.add('active');
-    document.querySelectorAll('#g-list-view .tab-panel').forEach(p=>p.classList.toggle('active',p.id===t.dataset.gt));
-  });
-});
-document.getElementById('back-grp-btn').addEventListener('click',loadGroups);
-
-// CHAT
-function buildChatLayout(){
-  const p=document.getElementById('page-chat');
-  p.innerHTML=`
-    <div class="chat-sb">
-      <div class="chat-sb-head">Conversations</div>
-      <input class="chat-srch" id="chat-srch" type="text" placeholder="🔍 Search…" autocomplete="off"/>
-      <div class="chat-list" id="chat-list"></div>
-    </div>
-    <div class="chat-win" id="chat-win">
-      <div class="chat-no" id="chat-no"><div class="bi">💬</div><div>Select a contact</div></div>
-      <div id="chat-active" class="hidden" style="display:flex;flex-direction:column;height:100%">
-        <div class="cwh">
-          <div id="cwp-av">?</div>
-          <div><div id="cwp-name">…</div><div id="cwp-status">…</div></div>
-        </div>
-        <div id="msgs"></div>
-        <div class="chat-inp-bar">
-          <textarea id="chat-ta" placeholder="Type a message…" rows="1"></textarea>
-          <button id="chat-send">➤</button>
-        </div>
-      </div>
-    </div>`;
-  document.getElementById('chat-srch').addEventListener('input',e=>reChatList(e.target.value));
-  document.getElementById('chat-send').addEventListener('click',sendMsg);
-  document.getElementById('chat-ta').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMsg();}});
-  document.getElementById('chat-ta').addEventListener('input',function(){this.style.height='auto';this.style.height=Math.min(this.scrollHeight,110)+'px';});
-}
-function reChatList(filter=''){
-  const el=document.getElementById('chat-list');if(!el)return;
-  const q=filter.toLowerCase();
-  el.innerHTML='';
-  users.filter(u=>u.id!==me.id&&dname(u).toLowerCase().includes(q)).forEach(u=>{
-    const on=onlineIDs.has(u.id),unread=unreadDM[u.id]||0;
-    const item=document.createElement('div');
-    item.className='chat-item'+(activeChatID===u.id?' active':'');
-    const s=avSrc(u);
-    item.innerHTML=`<div class="ci-av">${s?`<img src="${s}" alt=""/>`:inits(u)}<span class="pdot ${on?'on':''}" data-uid="${u.id}"></span></div><div class="ci-info"><div class="ci-name">${esc(dname(u))}</div><div class="ci-last">${on?'🟢 Online':'⚫ Offline'}</div></div>${unread?`<span class="ubadge">${unread}</span>`:''}`;
-    item.addEventListener('click',()=>openDM(u));
-    el.appendChild(item);
-  });
-}
-async function openDM(partner){
-  activeChatID=partner.id;unreadDM[partner.id]=0;
-  reChatList(document.getElementById('chat-srch')?.value||'');
-  showChatWin();
-  const s=avSrc(partner);
-  const av=document.getElementById('cwp-av');
-  if(s)av.innerHTML=`<img src="${s}" alt=""/>`;else av.textContent=inits(partner);
-  document.getElementById('cwp-name').textContent=dname(partner);
-  document.getElementById('cwp-status').textContent=onlineIDs.has(partner.id)?'🟢 Online':'⚫ Offline';
-  const msgEl=document.getElementById('msgs');
-  msgEl.innerHTML='<div style="color:var(--text-dim);text-align:center;font-size:13px;padding:18px">Loading…</div>';
-  try{const ms=await api('/api/messages?recipient_id='+partner.id);cachedMsgs[partner.id]=ms||[];}catch(_){}
-  msgEl.innerHTML='';
-  const ms=cachedMsgs[partner.id]||[];
-  if(!ms.length)msgEl.innerHTML='<div style="color:var(--text-dim);text-align:center;font-size:13px;padding:18px">No messages yet 👋</div>';
-  else ms.forEach(m=>appendMsg(m,false));
-  scrollMsgs();
-}
-function openGroupChat(gid,groupName){
-  activeChatID='g:'+gid;
-  showChatWin();
-  const av=document.getElementById('cwp-av');av.textContent='🏛️';
-  document.getElementById('cwp-name').textContent=groupName;
-  document.getElementById('cwp-status').textContent='Group Chat';
-  const msgEl=document.getElementById('msgs');
-  msgEl.innerHTML='<div style="color:var(--text-dim);text-align:center;font-size:13px;padding:18px">Loading…</div>';
-  api('/api/messages/group?group_id='+gid).then(ms=>{
-    cachedMsgs['g:'+gid]=ms||[];msgEl.innerHTML='';
-    if(!ms||!ms.length)msgEl.innerHTML='<div style="color:var(--text-dim);text-align:center;font-size:13px;padding:18px">No messages yet</div>';
-    else ms.forEach(m=>appendMsg(m,false));scrollMsgs();
-  }).catch(_=>{msgEl.innerHTML='';});
-}
-function showChatWin(){
-  document.getElementById('chat-no').classList.add('hidden');
-  const a=document.getElementById('chat-active');a.classList.remove('hidden');a.style.display='flex';
-}
-function appendMsg(msg,scroll=true){
-  const area=document.getElementById('msgs');if(!area)return;
-  const isMine=msg.sender_id===me.id;
-  const au=isMine?null:users.find(u=>u.id===msg.sender_id);
-  const row=document.createElement('div');row.className='mr '+(isMine?'mine':'theirs');
-  row.innerHTML=`<div>${(!isMine&&au)?`<div style="font-size:11px;color:var(--text-dim);margin-bottom:1px">${esc(dname(au))}</div>`:''}<div class="mb">${esc(msg.content)}</div><div class="mt">${fmt(msg.created_at)}</div></div>`;
-  area.appendChild(row);if(scroll)scrollMsgs();
-}
-function scrollMsgs(){const el=document.getElementById('msgs');if(el)el.scrollTop=el.scrollHeight;}
-async function sendMsg(){
-  const ta=document.getElementById('chat-ta');
-  const content=ta.value.trim();if(!content||!activeChatID)return;
-  const btn=document.getElementById('chat-send');btn.disabled=true;
-  ta.value='';ta.style.height='auto';
-  appendMsg({sender_id:me.id,content,created_at:new Date().toISOString()},true);
-  try{
-    if(typeof activeChatID==='string'&&activeChatID.startsWith('g:')){
-      await api('/api/messages/group',{method:'POST',body:JSON.stringify({group_id:Number(activeChatID.slice(2)),content})});
-    }else{
-      await api('/api/messages',{method:'POST',body:JSON.stringify({recipient_id:activeChatID,content})});
-    }
-  }catch(e){toast('Failed: '+e.message);}
-  finally{btn.disabled=false;}
-}
-
-// NOTIFICATIONS
-async function loadNotifs(){
-  const el=document.getElementById('notif-list');
-  el.innerHTML='<div class="loading"><span class="spinner"></span></div>';
-  notifCnt=0;updBadge();
-  try{
-    const ns=await api('/api/notifications');
-    el.innerHTML='';
-    if(!ns||!ns.length){el.innerHTML='<div class="empty"><div class="ei">🔔</div>No notifications</div>';return;}
-    ns.forEach(n=>{
-      const icon=n.type==='follow_request'?'👤':n.type==='follow_accepted'?'✅':n.type==='group_invite'?'🏛️':n.type==='event'?'📅':'🔔';
-      const div=document.createElement('div');div.className='notif-item '+(n.is_read?'':'unread');
-      div.innerHTML=`<div class="notif-icon-big">${icon}</div><div class="notif-text">${esc(n.content||n.message||'')}<div class="notif-time">${fmtD(n.created_at)}</div></div>${!n.is_read?`<button class="btn btn-secondary btn-sm mr-btn" data-id="${n.id}">✓</button>`:''}${n.type==='follow_request'?`<button class="btn btn-primary btn-sm acc-fl" data-uid="${n.actor_id||n.from_user_id}">Accept</button><button class="btn btn-danger btn-sm rej-fl" data-uid="${n.actor_id||n.from_user_id}">Decline</button>`:''}`;
-      div.querySelectorAll('.mr-btn').forEach(b=>b.addEventListener('click',async()=>{try{await api('/api/notifications',{method:'PUT',body:JSON.stringify({id:Number(b.dataset.id)})});loadNotifs();}catch(e){toast(e.message);}}));
-      div.querySelectorAll('.acc-fl').forEach(b=>b.addEventListener('click',async()=>{try{await api('/api/follow/respond',{method:'POST',body:JSON.stringify({follower_id:Number(b.dataset.uid),accept:true})});toast('Accepted');loadNotifs();}catch(e){toast(e.message);}}));
-      div.querySelectorAll('.rej-fl').forEach(b=>b.addEventListener('click',async()=>{try{await api('/api/follow/respond',{method:'POST',body:JSON.stringify({follower_id:Number(b.dataset.uid),accept:false})});toast('Declined');loadNotifs();}catch(e){toast(e.message);}}));
-      el.appendChild(div);
-    });
-  }catch(e){el.innerHTML=`<div class="empty">Error: ${esc(e.message)}</div>`;}
-}
-document.getElementById('mark-all-btn').addEventListener('click',async()=>{
-  try{await api('/api/notifications',{method:'PUT',body:JSON.stringify({all:true})});loadNotifs();}catch(e){toast(e.message);}
-});
-document.getElementById('notif-btn').addEventListener('click',()=>gotoPage('notifications'));
-function updBadge(){
-  const b=document.getElementById('notif-badge');
-  if(notifCnt>0){b.textContent=notifCnt>9?'9+':notifCnt;b.style.display='block';}else b.style.display='none';
-}
-
-// MODALS
-function openM(id){document.getElementById(id).classList.remove('hidden');}
-function closeM(id){document.getElementById(id).classList.add('hidden');}
-document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>closeM(b.dataset.close)));
-document.querySelectorAll('.modal-backdrop').forEach(bd=>bd.addEventListener('click',e=>{if(e.target===bd)bd.classList.add('hidden');}));
-
-// BOOT
-document.getElementById('login-btn').addEventListener('click',doLogin);
-document.getElementById('lpw').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
-document.getElementById('tog-pw').addEventListener('click',function(){
-  const i=document.getElementById('lpw');i.type=i.type==='password'?'text':'password';this.textContent=i.type==='password'?'👁':'🙈';
-});
-document.getElementById('reg-btn').addEventListener('click',()=>{
-  if(window.electronAPI)window.electronAPI.openRegister();else window.open('http://localhost:3000/register');
-});
-document.getElementById('logout-btn').addEventListener('click',doLogout);
-document.getElementById('tb-user-btn').addEventListener('click',()=>gotoPage('profile'));
-document.getElementById('tb-search').addEventListener('input',e=>{
-  const q=e.target.value.trim();if(!q)return;
-  gotoPage('people');document.getElementById('ppl-srch').value=q;renderPeople(q);
-});
-
-(async()=>{
-  try{const u=await api('/api/me');if(u&&u.id){me=u;await startApp();return;}}catch(_){}
-  document.getElementById('login-screen').classList.remove('hidden');
-})();
-</script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/websocket.js"></script>
+<script src="js/feed.js"></script>
+<script src="js/profile.js"></script>
+<script src="js/people.js"></script>
+<script src="js/groups.js"></script>
+<script src="js/chat.js"></script>
+<script src="js/notifications.js"></script>
+<script src="js/app.js"></script>
 </body>
 </html>
