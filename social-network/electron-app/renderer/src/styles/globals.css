@@ -61,8 +61,13 @@ img{max-width:100%;border-radius:8px;object-fit:cover}
 .brand{font-weight:800;font-size:15px}.brand span{color:var(--accent)}
 .tb-search{flex:1;max-width:300px;padding:7px 13px;background:var(--bg-mid);border:1px solid var(--border);border-radius:20px;color:var(--text);font-size:13px;outline:none;transition:border-color var(--tr)}
 .tb-search:focus{border-color:var(--accent)}
+.tb-nav{display:flex;align-items:center;gap:2px}
+.tb-btn{background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer;padding:6px 10px;border-radius:8px;transition:color var(--tr),background var(--tr)}
+.tb-btn:hover{color:var(--text);background:var(--bg-mid)}
+.tb-btn.active{color:var(--accent)}
 .notif-btn{position:relative;background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer;padding:4px 8px;border-radius:8px;transition:color var(--tr)}
 .notif-btn:hover{color:var(--text)}
+.notif-btn.active{color:var(--accent)}
 .notif-badge{position:absolute;top:0;right:0;background:var(--accent2);color:#fff;border-radius:10px;font-size:10px;font-weight:700;padding:1px 5px;min-width:16px;text-align:center}
 .conn-dot{width:8px;height:8px;border-radius:50%;background:var(--offline);flex-shrink:0;transition:background var(--tr)}
 .conn-dot.on{background:var(--online)}
@@ -70,9 +75,9 @@ img{max-width:100%;border-radius:8px;object-fit:cover}
 .tb-user:hover{background:var(--bg-mid)}
 .tb-av{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#4f46e5,#7c6af7);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;overflow:hidden;flex-shrink:0}
 .tb-av img{width:100%;height:100%;object-fit:cover;border-radius:50%}
-.tb-name{font-size:13px;font-weight:600}
-.logout-btn{padding:5px 12px;border:1px solid var(--border);border-radius:8px;background:transparent;color:var(--text-dim);cursor:pointer;font-size:12px;transition:color var(--tr)}
-.logout-btn:hover{color:var(--offline);border-color:var(--offline)}
+.tb-name,.tb-uname{font-size:13px;font-weight:600}
+.logout-btn,.tb-logout{padding:5px 12px;border:1px solid var(--border);border-radius:8px;background:transparent;color:var(--text-dim);cursor:pointer;font-size:12px;transition:color var(--tr)}
+.logout-btn:hover,.tb-logout:hover{color:var(--offline);border-color:var(--offline)}
 
 /* ── Nav ───────────────────────────────────────────────── */
 .nav-sidebar{grid-area:nav;background:var(--bg-dark);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:10px 8px;gap:3px}
