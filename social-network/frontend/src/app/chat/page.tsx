@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
 import { useWS } from "@/lib/WebSocketContext";
@@ -23,6 +23,14 @@ const EMOJIS = [
 ];
 
 export default function ChatPage() {
+  return (
+    <Suspense fallback={null}>
+      <ChatPageInner />
+    </Suspense>
+  );
+}
+
+function ChatPageInner() {
   const [me, setMe] = useState<any>(null);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [selected, setSelected] = useState<Contact | null>(null);
