@@ -1,0 +1,60 @@
+import { useState, useEffect } from 'react'
+import { useStore } from '../../store'
+import { apiFetch, fmtD } from '../../lib/api'
+
+const ICONS = {
+  follow: '👤', follow_request: '👤', like: '❤️', comment: '💬',
+  group_invite: '👥', group_join: '👥', event: '📅', message: '💬',
+}
+
+export default function Notifications() {
+  const { tok } = useStore()
+  const [notifs, setNotifs] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    apiFetch(tok, '/api/notifications')
+      .then(d => setNotifs(d || []))
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [tok])
+
+  async function markRead(id) {
+    try {
+      await apiFetch(tok, `/api/notifications/${id}/read`, { method: 'POST' })
+      setNotifs(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n))
+    } catch (_) {}
+  }
+
+  async function respond(id, action) {
+    try {
+      await apiFetch(tok, `/api/notifications/${id}/${action}`, { method: 'POST' })
+      setNotifs(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n))
+    } catch (_) {}
+  }
+
+  return (
+    <div>
+      <div className="page-title"><i className="bi bi-bell" /> Notifications</div>
+      {loading && <div className="loading"><span className="spinner" /> Loading…</div>}
+      {!loading && notifs.length === 0 && (
+        <div className="empty"><div className="ei">🔔</div>No notifications</div>
+      )}
+      {notifs.map(n => (
+        <div key={n.id} className={`notif-item ${!n.is_read ? 'unread' : ''}`} onClick={() => !n.is_read && markRead(n.id)}>
+          <div className="notif-icon-big">{ICONS[n.type] || '🔔'}</div>
+          <div style={{ flex: 1 }}>
+            <div className="notif-text">{n.content}</div>
+            <div className="notif-time">{fmtD(n.created_at)}</div>
+            {(n.type === 'follow_request') && !n.is_read && (
+              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                <button className="btn btn-primary btn-sm" onClick={e => { e.stopPropagation(); respond(n.id, 'accept') }}>Accept</button>
+                <button className="btn btn-secondary btn-sm" onClick={e => { e.stopPropagation(); respond(n.id, 'decline') }}>Decline</button>
+              </div>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}

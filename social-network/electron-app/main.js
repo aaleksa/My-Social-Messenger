@@ -41,11 +41,18 @@ function createWindow() {
     },
   });
 
-  mainWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'));
+  const isDev = process.env.ELECTRON_DEV === 'true';
+  if (isDev) {
+    mainWindow.loadURL('http://localhost:5173');
+    mainWindow.webContents.openDevTools();
+  } else {
+    mainWindow.loadFile(path.join(__dirname, 'renderer', 'dist', 'index.html'));
+  }
 
-  // Prevent renderer from navigating away from the local HTML
+  // Prevent renderer from navigating away from the app
   mainWindow.webContents.on('will-navigate', (event, url) => {
-    if (!url.startsWith('file://')) event.preventDefault();
+    const allowed = isDev ? url.startsWith('http://localhost:5173') : url.startsWith('file://');
+    if (!allowed) event.preventDefault();
   });
   // Open all external links in the system browser
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
