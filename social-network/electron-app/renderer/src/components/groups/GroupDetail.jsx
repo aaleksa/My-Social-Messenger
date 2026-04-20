@@ -12,6 +12,7 @@ export default function GroupDetail({ group, onBack }) {
   const [members, setMembers] = useState([])
   const [events, setEvents] = useState([])
   const [isMember, setIsMember] = useState(false)
+  const [responses, setResponses] = useState({})
   const [showEvent, setShowEvent] = useState(false)
   const [ev, setEv] = useState({ title: '', description: '', event_time: '' })
   const [chatInput, setChatInput] = useState('')
@@ -26,7 +27,11 @@ export default function GroupDetail({ group, onBack }) {
       setMembers(ms)
       setIsMember(ms.some(m => m.id === me?.id))
     }).catch(() => {})
-    apiFetch(tok, `/api/groups/events?group_id=${group.id}`).then(d => setEvents(d || [])).catch(() => {})
+    apiFetch(tok, `/api/groups/events?group_id=${group.id}`).then(d => {
+      const evts = d || []
+      setEvents(evts)
+      setResponses(Object.fromEntries(evts.map(e => [e.id, e.user_response || ''])))
+    }).catch(() => {})
     // Load group chat messages
     if (!cachedMsgs[chatKey]) {
       apiFetch(tok, `/api/messages/group?group_id=${group.id}`)
@@ -66,11 +71,14 @@ export default function GroupDetail({ group, onBack }) {
   }
 
   async function rsvp(eventId, status) {
+    setResponses(prev => ({ ...prev, [eventId]: status }))
     try {
       await apiFetch(tok, '/api/groups/events/respond', {
         method: 'POST', body: JSON.stringify({ event_id: eventId, response: status }),
       })
-    } catch (_) {}
+    } catch (_) {
+      setResponses(prev => ({ ...prev, [eventId]: '' }))
+    }
   }
 
   async function sendGroupMsg(e) {
@@ -153,8 +161,14 @@ export default function GroupDetail({ group, onBack }) {
               <div className="event-desc">{ev.description}</div>
               <div className="event-meta">📅 {fmtD(ev.event_time)}</div>
               <div className="event-rsvp">
-                <button className="btn btn-primary btn-sm" onClick={() => rsvp(ev.id, 'going')}>Going</button>
-                <button className="btn btn-secondary btn-sm" onClick={() => rsvp(ev.id, 'not_going')}>Not going</button>
+                <button
+                  className={`btn btn-sm ${responses[ev.id] === 'going' ? 'btn-primary' : 'btn-secondary'}`}
+                  onClick={() => rsvp(ev.id, 'going')}
+                >✓ Going</button>
+                <button
+                  className={`btn btn-sm ${responses[ev.id] === 'not_going' ? 'btn-primary' : 'btn-secondary'}`}
+                  onClick={() => rsvp(ev.id, 'not_going')}
+                >✗ Not going</button>
               </div>
             </div>
           ))}

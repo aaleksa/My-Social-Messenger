@@ -7,21 +7,30 @@ import { useOnline } from '../../hooks/useOnline'
 const OFFLINE_MSG = 'You are offline. Check your internet connection.'
 
 export default function ChatWindow() {
-  const { tok, me, users, activeChatID, ws, cachedMsgs, setCachedMsgs, pushMsg, onlineIDs } = useStore()
+  const { tok, me, users, groups, activeChatID, ws, cachedMsgs, setCachedMsgs, pushMsg, onlineIDs } = useStore()
   const [text, setText] = useState('')
   const [sendErr, setSendErr] = useState('')
   const msgsRef = useRef()
   const online = useOnline()
 
-  const partner = users.find(u => u.id === activeChatID)
+  const isGroup = typeof activeChatID === 'string' && activeChatID.startsWith('g:')
+  const groupID  = isGroup ? parseInt(activeChatID.slice(2)) : null
+  const group   = isGroup ? groups.find(g => g.id === groupID) : null
+  const partner = !isGroup ? users.find(u => u.id === activeChatID) : null
   const msgs = cachedMsgs[activeChatID] || []
 
   useEffect(() => {
     if (!activeChatID) return
     if (cachedMsgs[activeChatID]) return
-    apiFetch(tok, `/api/messages?recipient_id=${activeChatID}`)
-      .then(data => setCachedMsgs(activeChatID, data || []))
-      .catch(() => {})
+    if (isGroup) {
+      apiFetch(tok, `/api/messages/group?group_id=${groupID}`)
+        .then(data => setCachedMsgs(activeChatID, (data || []).reverse()))
+        .catch(() => {})
+    } else {
+      apiFetch(tok, `/api/messages?recipient_id=${activeChatID}`)
+        .then(data => setCachedMsgs(activeChatID, data || []))
+        .catch(() => {})
+    }
   }, [activeChatID])
 
   useEffect(() => {
@@ -33,7 +42,12 @@ export default function ChatWindow() {
     if (!online) { setSendErr(OFFLINE_MSG); return }
     if (!ws || ws.readyState !== WebSocket.OPEN) { setSendErr(OFFLINE_MSG); return }
     setSendErr('')
-    const msg = { type: 'chat_message', receiver_id: activeChatID, content: text }
+    let msg
+    if (isGroup) {
+      msg = { type: 'group_message', group_id: groupID, content: text }
+    } else {
+      msg = { type: 'chat_message', receiver_id: activeChatID, content: text }
+    }
     ws.send(JSON.stringify(msg))
     pushMsg(activeChatID, { ...msg, sender_id: me.id, created_at: new Date().toISOString() })
     setText('')
@@ -54,15 +68,24 @@ export default function ChatWindow() {
     )
   }
 
-  const isOnline = onlineIDs.has(activeChatID)
+  const isOnline = !isGroup && onlineIDs.has(activeChatID)
 
   return (
     <div className="chat-win">
       <div className="cwh">
-        <Avatar user={partner} size={35} className="cwp-av" />
+        {isGroup ? (
+          <div style={{
+            width: 35, height: 35, borderRadius: '50%',
+            background: 'var(--accent)', display: 'flex',
+            alignItems: 'center', justifyContent: 'center',
+            fontWeight: 700, color: '#fff', fontSize: 14, flexShrink: 0,
+          }}>{(group?.title || 'G')[0].toUpperCase()}</div>
+        ) : (
+          <Avatar user={partner} size={35} className="cwp-av" />
+        )}
         <div>
-          <div style={{ fontWeight: 700, fontSize: 14 }}>{dname(partner)}</div>
-          <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>{isOnline ? '🟢 Online' : 'Offline'}</div>
+          <div style={{ fontWeight: 700, fontSize: 14 }}>{isGroup ? (group?.title || 'Group') : dname(partner)}</div>
+          <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>{isGroup ? 'Group chat' : (isOnline ? '🟢 Online' : 'Offline')}</div>
         </div>
       </div>
       <div className="msgs" ref={msgsRef}>

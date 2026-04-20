@@ -38,9 +38,17 @@ function handleMsg(msg, store) {
       }
       break
     }
-    case 'group_message':
-      s.pushMsg('g:' + msg.group_id, msg)
+    case 'group_message': {
+      const gkey = 'g:' + msg.group_id
+      s.pushMsg(gkey, msg)
+      if (s.activeChatID !== gkey) {
+        s.addUnreadGroup(gkey)
+        const preview = (msg.content || '').length > 60 ? msg.content.slice(0, 60) + '…' : (msg.content || '')
+        const grp = s.groups.find(g => g.id === msg.group_id)
+        s.showToast(`💬 [${grp ? grp.title : 'Group'}] — ${preview}`)
+      }
       break
+    }
     case 'notification':
       s.incNotif()
       s.showToast('🔔 ' + (msg.content || 'New notification'))

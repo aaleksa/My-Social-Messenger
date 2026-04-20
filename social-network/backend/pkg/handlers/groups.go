@@ -341,10 +341,15 @@ func (h *GroupHandler) RespondToEvent(w http.ResponseWriter, r *http.Request) {
 // GET /api/groups/events?group_id=1
 func (h *GroupHandler) ListEvents(w http.ResponseWriter, r *http.Request) {
 	groupID, _ := strconv.ParseInt(r.URL.Query().Get("group_id"), 10, 64)
+	viewerID := middleware.GetUserID(r)
 
 	rows, err := h.DB.Query(
-		`SELECT id, group_id, creator_id, title, description, event_time, created_at FROM group_events WHERE group_id = ? ORDER BY event_time ASC`,
-		groupID,
+		`SELECT ge.id, ge.group_id, ge.creator_id, ge.title, ge.description, ge.event_time, ge.created_at,
+		        COALESCE(er.response, '') AS user_response
+		 FROM group_events ge
+		 LEFT JOIN event_responses er ON er.event_id = ge.id AND er.user_id = ?
+		 WHERE ge.group_id = ? ORDER BY ge.event_time ASC`,
+		viewerID, groupID,
 	)
 	if err != nil {
 		http.Error(w, "internal server error", http.StatusInternalServerError)
@@ -355,7 +360,7 @@ func (h *GroupHandler) ListEvents(w http.ResponseWriter, r *http.Request) {
 	var events []models.GroupEvent
 	for rows.Next() {
 		var e models.GroupEvent
-		rows.Scan(&e.ID, &e.GroupID, &e.CreatorID, &e.Title, &e.Description, &e.EventTime, &e.CreatedAt)
+		rows.Scan(&e.ID, &e.GroupID, &e.CreatorID, &e.Title, &e.Description, &e.EventTime, &e.CreatedAt, &e.UserResponse)
 		events = append(events, e)
 	}
 

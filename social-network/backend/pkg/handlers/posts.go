@@ -107,6 +107,12 @@ func (h *PostHandler) ListPosts(w http.ResponseWriter, r *http.Request) {
 		)
 	} else {
 		// Feed: posts from followed users + own posts
+		limitParam := r.URL.Query().Get("limit")
+		offsetParam := r.URL.Query().Get("offset")
+		limit := int64(20)
+		offset := int64(0)
+		if limitParam != "" { limit, _ = strconv.ParseInt(limitParam, 10, 64) }
+		if offsetParam != "" { offset, _ = strconv.ParseInt(offsetParam, 10, 64) }
 		rows, err = h.DB.Query(
 			`SELECT p.id, p.user_id, p.group_id, p.content, p.image, p.privacy, p.created_at,
 			        COALESCE(u.first_name,''), COALESCE(u.last_name,''), COALESCE(u.avatar,'')
@@ -119,7 +125,7 @@ func (h *PostHandler) ListPosts(w http.ResponseWriter, r *http.Request) {
 			         SELECT 1 FROM followers WHERE follower_id = ? AND following_id = p.user_id AND status = 'accepted'))
 			   OR (p.privacy = 'private' AND EXISTS(
 			         SELECT 1 FROM post_allowed_users WHERE post_id = p.id AND user_id = ?)))
-			 ORDER BY p.created_at DESC LIMIT 50`, viewerID, viewerID, viewerID,
+			 ORDER BY p.created_at DESC LIMIT ? OFFSET ?`, viewerID, viewerID, viewerID, limit, offset,
 		)
 	}
 

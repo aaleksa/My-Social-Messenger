@@ -21,9 +21,11 @@ export const useStore = create((set, get) => ({
 
   // ── Users / Online ──────────────────────────────────────
   users:     [],
+  groups:    [],
   onlineIDs: new Set(),
 
   setUsers:    (users)    => set({ users }),
+  setGroups:   (groups)   => set({ groups }),
   setOnlineIDs:(ids)      => set({ onlineIDs: new Set(ids) }),
   addOnline:   (id)       => set(s => ({ onlineIDs: new Set([...s.onlineIDs, id]) })),
   removeOnline:(id)       => set(s => { const o = new Set(s.onlineIDs); o.delete(id); return { onlineIDs: o } }),
@@ -31,11 +33,14 @@ export const useStore = create((set, get) => ({
   // ── Chat ────────────────────────────────────────────────
   activeChatID: null,
   unreadDM:     {},
+  unreadGroup:  {},
   cachedMsgs:   {},
 
   setActiveChatID: (id)       => set({ activeChatID: id }),
   clearUnread:     (id)       => set(s => ({ unreadDM: { ...s.unreadDM, [id]: 0 } })),
   addUnread:       (id)       => set(s => ({ unreadDM: { ...s.unreadDM, [id]: (s.unreadDM[id] || 0) + 1 } })),
+  clearUnreadGroup:(key)      => set(s => ({ unreadGroup: { ...s.unreadGroup, [key]: 0 } })),
+  addUnreadGroup:  (key)      => set(s => ({ unreadGroup: { ...s.unreadGroup, [key]: (s.unreadGroup[key] || 0) + 1 } })),
   setCachedMsgs:   (key, msgs)=> set(s => ({ cachedMsgs: { ...s.cachedMsgs, [key]: msgs } })),
   pushMsg:         (key, msg) => set(s => ({ cachedMsgs: { ...s.cachedMsgs, [key]: [...(s.cachedMsgs[key] || []), msg] } })),
 
