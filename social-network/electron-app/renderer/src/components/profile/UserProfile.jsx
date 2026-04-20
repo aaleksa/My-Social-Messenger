@@ -22,7 +22,10 @@ export default function UserProfile() {
     // check if current user follows this user
     apiFetch(tok, '/api/users').then(d => {
       const u = (d || []).find(x => x.id === viewUserId)
-      if (u) setFollowStatus(u.follow_status || 'none')
+      if (u) {
+          const s = u.follow_status
+          setFollowStatus(s === 'accepted' || s === 'following' ? 'following' : s === 'pending' ? 'pending' : 'none')
+        }
     }).catch(() => {})
   }, [viewUserId])
 
@@ -63,7 +66,11 @@ export default function UserProfile() {
             {isPrivate && <div className="p-bio" style={{ color: 'var(--text-dim)', fontStyle: 'italic' }}>🔒 This profile is private</div>}
           </div>
           <button
-            className={`btn btn-sm ${followStatus === 'following' || followStatus === 'pending' ? 'btn-secondary' : 'btn-primary'}`}
+            className={`btn btn-sm ${
+              followStatus === 'following' ? 'btn-secondary'
+              : followStatus === 'pending' ? 'btn-warning'
+              : 'btn-primary'
+            }`}
             onClick={toggleFollow}
           >
             {followStatus === 'following' ? 'Unfollow' : followStatus === 'pending' ? 'Requested' : 'Follow'}

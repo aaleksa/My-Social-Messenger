@@ -33,6 +33,7 @@ img{max-width:100%;border-radius:8px;object-fit:cover}
 .btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:var(--accent-h)}
 .btn-secondary{background:var(--bg-light);color:var(--text-dim)}.btn-secondary:hover{color:var(--text)}
 .btn-danger{background:#7f1d1d;color:#fca5a5}.btn-danger:hover{background:#991b1b}
+.btn-warning{background:#78350f;color:#fcd34d;border:1px solid #92400e}.btn-warning:hover{background:#92400e}
 .btn-sm{padding:5px 12px;font-size:12px}
 .btn:disabled{opacity:.5;cursor:not-allowed}
 

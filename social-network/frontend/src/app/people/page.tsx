@@ -53,18 +53,20 @@ export default function PeoplePage() {
   }
 
   function btnStyle(u: User): React.CSSProperties {
-    const isActive = u.follow_status === "accepted" || u.follow_status === "pending";
+    if (u.follow_status === "accepted") return {
+      padding: "0.4rem 1rem", borderRadius: "var(--radius)", fontWeight: 500, fontSize: 13,
+      border: "1.5px solid var(--border)", background: "transparent", color: "var(--text-muted)",
+      cursor: busy === u.id ? "not-allowed" : "pointer", whiteSpace: "nowrap" as const, transition: "all .15s",
+    };
+    if (u.follow_status === "pending") return {
+      padding: "0.4rem 1rem", borderRadius: "var(--radius)", fontWeight: 500, fontSize: 13,
+      border: "1.5px solid #d97706", background: "rgba(217,119,6,.12)", color: "#d97706",
+      cursor: busy === u.id ? "not-allowed" : "pointer", whiteSpace: "nowrap" as const, transition: "all .15s",
+    };
     return {
-      padding: "0.4rem 1rem",
-      borderRadius: "var(--radius)",
-      border: isActive ? "1.5px solid var(--border)" : "none",
-      background: isActive ? "transparent" : "var(--accent)",
-      color: isActive ? "var(--text-muted)" : "#fff",
-      fontWeight: 500,
-      fontSize: 13,
-      cursor: busy === u.id ? "not-allowed" : "pointer",
-      whiteSpace: "nowrap" as const,
-      transition: "all .15s",
+      padding: "0.4rem 1rem", borderRadius: "var(--radius)", fontWeight: 500, fontSize: 13,
+      border: "none", background: "var(--accent)", color: "#fff",
+      cursor: busy === u.id ? "not-allowed" : "pointer", whiteSpace: "nowrap" as const, transition: "all .15s",
     };
   }
 

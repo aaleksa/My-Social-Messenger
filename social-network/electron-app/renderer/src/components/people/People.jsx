@@ -17,7 +17,9 @@ export default function People() {
         // init follow state from API response
         const states = {}
         list.forEach(u => {
-          states[u.id] = u.follow_status === 'following' || u.follow_status === 'pending'
+          if (u.follow_status === 'following' || u.follow_status === 'accepted') states[u.id] = 'following'
+          else if (u.follow_status === 'pending') states[u.id] = 'pending'
+          else states[u.id] = 'none'
         })
         setFollowStates(states)
       })
@@ -30,14 +32,16 @@ export default function People() {
   )
 
   async function toggleFollow(uid) {
-    const isFollowing = followStates[uid]
+    const status = followStates[uid] || 'none'
     try {
-      if (isFollowing) {
+      if (status === 'following' || status === 'pending') {
         await apiFetch(tok, `/api/follow?following_id=${uid}`, { method: 'DELETE' })
-        setFollowStates(p => ({ ...p, [uid]: false }))
+        setFollowStates(p => ({ ...p, [uid]: 'none' }))
       } else {
         await apiFetch(tok, '/api/follow', { method: 'POST', body: JSON.stringify({ following_id: uid }) })
-        setFollowStates(p => ({ ...p, [uid]: true }))
+        const target = users.find(u => u.id === uid)
+        const isPrivate = target?.privacy === 'private'
+        setFollowStates(p => ({ ...p, [uid]: isPrivate ? 'pending' : 'following' }))
       }
     } catch (_) {}
   }
@@ -63,10 +67,16 @@ export default function People() {
             <div className="people-name" style={{ cursor: 'pointer' }} onClick={() => setPage('userprofile', { userId: u.id })}>{dname(u)}</div>
             {u.nickname && <div className="people-nick">@{u.nickname}</div>}
             <button
-              className={`btn btn-sm ${followStates[u.id] ? 'btn-secondary' : 'btn-primary'}`}
+              className={`btn btn-sm ${
+                followStates[u.id] === 'following' ? 'btn-secondary'
+                : followStates[u.id] === 'pending' ? 'btn-warning'
+                : 'btn-primary'
+              }`}
               onClick={() => toggleFollow(u.id)}
             >
-              {followStates[u.id] ? 'Unfollow' : 'Follow'}
+              {followStates[u.id] === 'following' ? '✓ Unfollow'
+                : followStates[u.id] === 'pending' ? '⏳ Надіслано'
+                : 'Follow'}
             </button>
           </div>
         ))}
