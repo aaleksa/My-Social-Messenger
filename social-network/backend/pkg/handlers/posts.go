@@ -188,9 +188,15 @@ func (h *PostHandler) CreateComment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	commentID, _ := result.LastInsertId()
+
+	// Return full comment object
+	var c models.Comment
+	h.DB.QueryRow(`SELECT id, post_id, user_id, content, image, created_at FROM comments WHERE id = ?`, commentID).
+		Scan(&c.ID, &c.PostID, &c.UserID, &c.Content, &c.Image, &c.CreatedAt)
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]int64{"comment_id": commentID})
+	json.NewEncoder(w).Encode(c)
 }
 
 // GET /api/posts/comments?post_id=1

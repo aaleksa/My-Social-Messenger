@@ -32,9 +32,8 @@ export default function PostCard({ post, onDelete }) {
       let imageUrl = ''
       if (cinImage) {
         const fd = new FormData()
-        fd.append('file', cinImage.file)
+        fd.append('image', cinImage.file)
         const up = await apiForm(tok, '/api/upload', fd)
-        // backend returns {url: "/uploads/filename"} — store just the filename
         imageUrl = (up?.url || '').replace('/uploads/', '')
       }
       const c = await apiFetch(tok, '/api/posts/comment', {
