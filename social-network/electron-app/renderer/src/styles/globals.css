@@ -1,12 +1,20 @@
 /* ── Reset & Variables ─────────────────────────────────── */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
+:root,[data-theme="dark"]{
   --bg-deep:#0f0f1a;--bg-dark:#16162a;--bg-mid:#1e1e35;--bg-light:#272744;
   --accent:#7c6af7;--accent-h:#9b8dff;--accent2:#f472b6;
   --text:#e0e0f0;--text-dim:#888aaa;
   --online:#4ade80;--offline:#f87171;
   --bubble-me:#3d2e8a;--bubble-them:#23233f;
   --border:#2e2e50;--radius:12px;--tr:0.18s ease;
+}
+[data-theme="light"]{
+  --bg-deep:#f0f2f8;--bg-dark:#ffffff;--bg-mid:#e8eaf2;--bg-light:#d8dce8;
+  --accent:#6053e8;--accent-h:#7c6af7;--accent2:#e0467a;
+  --text:#1a1a2e;--text-dim:#5a5a7a;
+  --online:#16a34a;--offline:#dc2626;
+  --bubble-me:#6053e8;--bubble-them:#dde0ef;
+  --border:#c8ccdc;--radius:12px;--tr:0.18s ease;
 }
 html,body,#root{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg-deep);color:var(--text)}
 ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--bg-light);border-radius:3px}

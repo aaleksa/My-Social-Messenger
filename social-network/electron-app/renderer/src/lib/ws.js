@@ -52,7 +52,14 @@ function handleMsg(msg, store) {
     case 'notification':
       s.incNotif()
       s.showToast('🔔 ' + (msg.content || 'New notification'))
+      s.bumpFeed()
       break
+    case 'typing': {
+      const tkey = msg.group_id ? ('g:' + msg.group_id) : msg.sender_id
+      s.setTyping(tkey)
+      setTimeout(() => s.clearTyping(tkey), 3000)
+      break
+    }
     default:
       break
   }

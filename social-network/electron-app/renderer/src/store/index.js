@@ -1,5 +1,9 @@
 import { create } from 'zustand'
 
+// Apply persisted theme immediately
+const savedTheme = localStorage.getItem('sn_theme') || 'dark'
+document.documentElement.setAttribute('data-theme', savedTheme)
+
 export const useStore = create((set, get) => ({
   // ── Auth ────────────────────────────────────────────────
   me:  null,
@@ -61,4 +65,22 @@ export const useStore = create((set, get) => ({
     set({ toast: msg })
     setTimeout(() => set(s => s.toast === msg ? { toast: null } : {}), dur)
   },
+
+  // ── Theme ────────────────────────────────────────────────
+  theme: savedTheme,
+  toggleTheme: () => set(s => {
+    const next = s.theme === 'dark' ? 'light' : 'dark'
+    localStorage.setItem('sn_theme', next)
+    document.documentElement.setAttribute('data-theme', next)
+    return { theme: next }
+  }),
+
+  // ── Typing ────────────────────────────────────────────────
+  typingUsers: {},   // key: userID or 'g:N' → timestamp
+  setTyping:   (key) => set(s => ({ typingUsers: { ...s.typingUsers, [key]: Date.now() } })),
+  clearTyping: (key) => set(s => { const t = { ...s.typingUsers }; delete t[key]; return { typingUsers: t } }),
+
+  // ── Feed signal ──────────────────────────────────────────
+  feedSignal: 0,
+  bumpFeed: () => set(s => ({ feedSignal: s.feedSignal + 1 })),
 }))

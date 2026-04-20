@@ -4,7 +4,7 @@ import { apiFetch, dname } from '../../lib/api'
 import Avatar from '../ui/Avatar'
 
 export default function Topbar() {
-  const { me, tok, setPage, notifCnt, resetNotif, wsOn, clearAuth, setSearchQuery } = useStore()
+  const { me, tok, setPage, notifCnt, resetNotif, wsOn, clearAuth, setSearchQuery, theme, toggleTheme } = useStore()
   const [q, setQ] = useState('')
 
   function doSearch(e) {
@@ -26,24 +26,19 @@ export default function Topbar() {
   }
 
   return (
-    <div className="topbar">
-      <div className="brand">Social<span>Net</span></div>
-      <input className="tb-search" placeholder="Search people…" value={q}
-        onChange={doSearch}
+    <div className='topbar'>
+      <div className='brand'>Social<span>Net</span></div>
+      <input className='tb-search' placeholder='Search people…' v lue={q}
+                         h}
       />
-      <div style={{ flex: 1 }} />
-      <button className="notif-btn" onClick={() => { navTo('notifications'); resetNotif() }}>
-        <i className="bi bi-bell" />
-        {notifCnt > 0 && <span className="notif-badge">{notifCnt}</span>}
+                                                cla                                     av                                              <i className='bi bi-bell' />
+                                         'n                                         'n                                         'n                              '                               : 'Switch to dark mode'}
+                                             { f                     >
+                                     me === 'dark' ? 'bi-sun' : 'bi-moon-stars'}`} />
       </button>
       <div className={`conn-dot ${wsOn ? 'on' : ''}`} title={wsOn ? 'Connected' : 'Disconnected'} />
-      <div className="tb-user" onClick={() => navTo('profile')}>
-        <Avatar user={me} size={28} className="tb-av" />
-        <span className="tb-name">{dname(me)}</span>
-      </div>
-      <button className="logout-btn" onClick={doLogout}>
-        <i className="bi bi-box-arrow-right" /> Logout
-      </button>
+      <div className='tb-user' onClick={() => navTo('profile      <div className='tb-user' onClick={() => navTo('profile>
+        <span classNa        <me        <span classNa      </        <span classNa        <me        <span classNa ogou        <span classNa        <me        <span classNa      </        <spa>
     </div>
   )
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useStore } from '../../store'
 import { apiFetch } from '../../lib/api'
 import PostCreate from './PostCreate'
@@ -7,12 +7,14 @@ import PostCard from './PostCard'
 const LIMIT = 20
 
 export default function Feed() {
-  const { tok } = useStore()
+  const { tok, feedSignal } = useStore()
   const [posts, setPosts] = useState([])
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
   const [offset, setOffset] = useState(0)
   const [hasMore, setHasMore] = useState(true)
+  const [hasNew, setHasNew] = useState(false)
+  const initialLoad = useRef(true)
 
   async function loadPosts(off, append = false) {
     try {
@@ -29,7 +31,22 @@ export default function Feed() {
     setLoading(true)
     loadPosts(0, false).finally(() => setLoading(false))
     setOffset(0)
+    setHasNew(false)
+    initialLoad.current = true
   }, [tok])
+
+  // Show "new activity" banner when feedSignal changes (skip initial)
+  useEffect(() => {
+    if (initialLoad.current) { initialLoad.current = false; return }
+    setHasNew(true)
+  }, [feedSignal])
+
+  function refresh() {
+    setHasNew(false)
+    setOffset(0)
+    setLoading(true)
+    loadPosts(0, false).finally(() => setLoading(false))
+  }
 
   async function loadMore() {
     const next = offset + LIMIT
@@ -45,6 +62,18 @@ export default function Feed() {
   return (
     <div>
       <div className="page-title"><i className="bi bi-house" /> Feed</div>
+      {hasNew && (
+        <div
+          onClick={refresh}
+          style={{
+            background: 'var(--accent)', color: '#fff', padding: '8px 16px',
+            borderRadius: 8, marginBottom: 12, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600, fontSize: 13,
+          }}
+        >
+          <i className="bi bi-arrow-clockwise" /> New activity — click to refresh
+        </div>
+      )}
       <PostCreate onPost={addPost} />
       {loading && <div className="loading"><span className="spinner" /> Loading posts…</div>}
       {!loading && posts.length === 0 && (

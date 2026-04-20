@@ -56,8 +56,20 @@ export default function Login() {
     }
   }
 
+  function validateReg() {
+    const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRe.test(reg.email)) return 'Please enter a valid email address.'
+    if (!reg.date_of_birth) return 'Date of birth is required.'
+    const age = (Date.now() - new Date(reg.date_of_birth).getTime()) / (365.25 * 24 * 3600 * 1000)
+    if (age < 13) return 'You must be at least 13 years old to register.'
+    if ((reg.password || '').length < 6) return 'Password must be at least 6 characters.'
+    return null
+  }
+
   async function doRegister(e) {
     e.preventDefault()
+    const validErr = validateReg()
+    if (validErr) { setErr(validErr); return }
     setErr(''); setLoading(true)
     try {
       const data = await apiFetch(null, '/api/auth/register', {
