@@ -1,7 +1,8 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { api } from "@/lib/api";
+import { useWS } from "@/lib/WebSocketContext";
 import Sidebar from "@/components/Sidebar";
 
 type Group = { id: number; creator_id: number; title: string; description: string; created_at: string; my_status: string; member_count: number };
@@ -18,7 +19,7 @@ export default function GroupPage() {
   const [members, setMembers] = useState<Member[]>([]);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [me, setMe] = useState<any>(null);
-  const [tab, setTab] = useState<"posts" | "events" | "members">("posts");
+  const [tab, setTab] = useState<"posts" | "events" | "members" | "chat">("posts");
   const [postContent, setPostContent] = useState("");
   const [postImage, setPostImage] = useState("");
   const [eventForm, setEventForm] = useState({ title: "", description: "", event_time: "" });
@@ -28,6 +29,10 @@ export default function GroupPage() {
   const [inviteUserId, setInviteUserId] = useState("");
   const [inviteMsg, setInviteMsg] = useState("");
   const [loading, setLoading] = useState(true);
+  const [chatMessages, setChatMessages] = useState<any[]>([]);
+  const [chatText, setChatText] = useState("");
+  const [chatBusy, setChatBusy] = useState(false);
+  const chatBottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     Promise.all([
@@ -47,8 +52,41 @@ export default function GroupPage() {
     }).catch(() => {}).finally(() => setLoading(false));
   }, [gid]);
 
+  const { lastMessage } = useWS();
   const isOwner = me?.id === group?.creator_id;
   const isMember = isOwner || group?.my_status === "accepted";
+
+  // Load group chat when tab is selected
+  useEffect(() => {
+    if (tab !== "chat" || !gid) return;
+    api.getGroupMessages(gid).then(m => setChatMessages(Array.isArray(m) ? [...m].reverse() : [])).catch(() => {});
+  }, [tab, gid]);
+
+  // Scroll to bottom when chat messages update
+  useEffect(() => {
+    chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatMessages.length]);
+
+  // Receive real-time group messages via WebSocket
+  useEffect(() => {
+    if (!lastMessage) return;
+    if (lastMessage.type === "group_message" && lastMessage.group_id === gid) {
+      setChatMessages(prev => [...prev, lastMessage]);
+    }
+  }, [lastMessage]);
+
+  async function sendChatMessage(e: React.FormEvent) {
+    e.preventDefault();
+    if (!chatText.trim() || chatBusy) return;
+    const content = chatText.trim();
+    setChatText("");
+    setChatBusy(true);
+    try {
+      await api.sendGroupMessage(gid, content);
+      setChatMessages(prev => [...prev, { sender_id: me?.id, group_id: gid, content, created_at: new Date().toISOString() }]);
+    } catch {}
+    setChatBusy(false);
+  }
 
   async function reloadGroup() {
     const [g, mem] = await Promise.all([api.getGroup(gid), api.listGroupMembers(gid)]);
@@ -205,14 +243,14 @@ export default function GroupPage() {
           <>
             {/* Tabs */}
             <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1.25rem" }}>
-              {(["posts", "events", "members"] as const).map(t => (
+              {(["posts", "events", "members", "chat"] as const).map(t => (
                 <button key={t} onClick={() => setTab(t)} style={{
                   padding: "0.4rem 1.1rem", borderRadius: "var(--radius)", fontSize: 14, fontWeight: 500,
                   border: "1px solid var(--border)", cursor: "pointer",
                   background: tab === t ? "var(--accent)" : "var(--bg-card)",
                   color: tab === t ? "#fff" : "var(--text)",
                 }}>
-                  {t === "posts" ? "Posts" : t === "events" ? "Events" : "Members"}
+                  {t === "posts" ? "Posts" : t === "events" ? "Events" : t === "chat" ? "💬 Chat" : "Members"}
                 </button>
               ))}
             </div>
@@ -374,6 +412,55 @@ export default function GroupPage() {
                   </div>
                 )}
               </>
+            )}
+
+            {/* CHAT */}
+            {tab === "chat" && (
+              <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "var(--radius)", boxShadow: "var(--shadow)", display: "flex", flexDirection: "column", height: 480 }}>
+                <div style={{ flex: 1, overflowY: "auto", padding: "1rem", display: "flex", flexDirection: "column", gap: 10 }}>
+                  {chatMessages.length === 0 && (
+                    <div style={{ textAlign: "center", color: "var(--text-muted)", padding: "3rem", fontSize: 14 }}>
+                      No messages yet. Start the conversation!
+                    </div>
+                  )}
+                  {chatMessages.map((msg: any, i: number) => {
+                    const isMine = msg.sender_id === me?.id;
+                    const sender = members.find(m => m.user_id === msg.sender_id);
+                    return (
+                      <div key={msg.id || i} style={{ display: "flex", flexDirection: isMine ? "row-reverse" : "row", alignItems: "flex-end", gap: 8 }}>
+                        {!isMine && (
+                          <div style={{ width: 30, height: 30, borderRadius: "50%", background: "var(--bg-input)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
+                            {sender?.avatar ? <img src={sender.avatar} alt="" style={{ width: 30, height: 30, objectFit: "cover" }} /> : <span style={{ fontSize: 14 }}>👤</span>}
+                          </div>
+                        )}
+                        <div style={{ maxWidth: "65%", padding: "8px 12px", borderRadius: 14, background: isMine ? "var(--accent)" : "var(--bg-input)", color: isMine ? "#fff" : "var(--text)", fontSize: 14 }}>
+                          {!isMine && sender && <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 3, opacity: .75 }}>{sender.first_name} {sender.last_name}</div>}
+                          {msg.content}
+                          <div style={{ fontSize: 10, opacity: .6, marginTop: 3, textAlign: isMine ? "right" : "left" }}>
+                            {new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <div ref={chatBottomRef} />
+                </div>
+                {isMember ? (
+                  <form onSubmit={sendChatMessage} style={{ display: "flex", gap: 8, padding: "0.75rem 1rem", borderTop: "1px solid var(--border)" }}>
+                    <input
+                      value={chatText}
+                      onChange={e => setChatText(e.target.value)}
+                      placeholder="Type a message…"
+                      style={{ flex: 1, padding: "0.5rem 1rem", borderRadius: 20, border: "1px solid var(--border)", background: "var(--bg-input)", color: "var(--text)", fontSize: 14, outline: "none" }}
+                    />
+                    <button type="submit" disabled={!chatText.trim() || chatBusy} style={{ background: "var(--accent)", color: "#fff", border: "none", borderRadius: "var(--radius)", padding: "0.5rem 1.25rem", fontWeight: 600, fontSize: 14, cursor: chatText.trim() && !chatBusy ? "pointer" : "not-allowed", opacity: chatText.trim() && !chatBusy ? 1 : 0.6 }}>
+                      Send
+                    </button>
+                  </form>
+                ) : (
+                  <div style={{ padding: "0.75rem 1rem", borderTop: "1px solid var(--border)", textAlign: "center", fontSize: 13, color: "var(--text-muted)" }}>Join the group to send messages</div>
+                )}
+              </div>
             )}
           </>
         )}

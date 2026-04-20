@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useStore } from '../../store'
 import { apiFetch, dname, fmtD } from '../../lib/api'
 import Avatar from '../ui/Avatar'
 import Modal from '../ui/Modal'
+import PostCreate from '../feed/PostCreate'
 
 export default function GroupDetail({ group, onBack }) {
-  const { tok, me } = useStore()
+  const { tok, me, cachedMsgs, setCachedMsgs, pushMsg } = useStore()
   const [tab, setTab] = useState('posts')
   const [posts, setPosts] = useState([])
   const [members, setMembers] = useState([])
@@ -13,6 +14,10 @@ export default function GroupDetail({ group, onBack }) {
   const [isMember, setIsMember] = useState(false)
   const [showEvent, setShowEvent] = useState(false)
   const [ev, setEv] = useState({ title: '', description: '', event_time: '' })
+  const [chatInput, setChatInput] = useState('')
+  const chatKey = `g:${group.id}`
+  const chatMsgs = cachedMsgs[chatKey] || []
+  const chatEndRef = useRef(null)
 
   useEffect(() => {
     apiFetch(tok, `/api/posts?group_id=${group.id}`).then(d => setPosts(d || [])).catch(() => {})
@@ -22,7 +27,17 @@ export default function GroupDetail({ group, onBack }) {
       setIsMember(ms.some(m => m.id === me?.id))
     }).catch(() => {})
     apiFetch(tok, `/api/groups/events?group_id=${group.id}`).then(d => setEvents(d || [])).catch(() => {})
+    // Load group chat messages
+    if (!cachedMsgs[chatKey]) {
+      apiFetch(tok, `/api/messages/group?group_id=${group.id}`)
+        .then(d => setCachedMsgs(chatKey, (d || []).reverse()))
+        .catch(() => {})
+    }
   }, [group.id])
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [chatMsgs.length])
 
   async function joinOrLeave() {
     try {
@@ -58,6 +73,20 @@ export default function GroupDetail({ group, onBack }) {
     } catch (_) {}
   }
 
+  async function sendGroupMsg(e) {
+    e.preventDefault()
+    if (!chatInput.trim()) return
+    const content = chatInput.trim()
+    setChatInput('')
+    try {
+      const msg = await apiFetch(tok, '/api/messages/group', {
+        method: 'POST',
+        body: JSON.stringify({ group_id: group.id, content }),
+      })
+      pushMsg(chatKey, msg || { id: Date.now(), sender_id: me.id, content, created_at: new Date().toISOString() })
+    } catch (_) {}
+  }
+
   return (
     <div>
       <button className="btn btn-secondary btn-sm" style={{ marginBottom: 14 }} onClick={onBack}>
@@ -83,15 +112,16 @@ export default function GroupDetail({ group, onBack }) {
       </div>
 
       <div className="tabs">
-        {['posts', 'members', 'events'].map(t => (
+        {['posts', 'members', 'events', 'chat'].map(t => (
           <button key={t} className={`tab ${tab === t ? 'active' : ''}`} onClick={() => setTab(t)}>
-            {t.charAt(0).toUpperCase() + t.slice(1)}
+            {t === 'chat' ? '💬 Chat' : t.charAt(0).toUpperCase() + t.slice(1)}
           </button>
         ))}
       </div>
 
       {tab === 'posts' && (
         <div>
+          {isMember && <PostCreate groupId={group.id} onPost={p => p && setPosts(prev => [p, ...prev])} />}
           {posts.length === 0 && <div className="empty"><div className="ei">📭</div>No posts yet</div>}
           {posts.map(p => (
             <div key={p.id} className="card">
@@ -128,6 +158,45 @@ export default function GroupDetail({ group, onBack }) {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {tab === 'chat' && (
+        <div style={{ display: 'flex', flexDirection: 'column', height: 420 }}>
+          <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8, padding: '10px 0' }}>
+            {chatMsgs.length === 0 && <div className="empty"><div className="ei">💬</div>No messages yet</div>}
+            {chatMsgs.map((m, i) => {
+              const isMine = m.sender_id === me?.id
+              const sender = members.find(u => u.id === m.sender_id)
+              return (
+                <div key={m.id || i} style={{ display: 'flex', flexDirection: isMine ? 'row-reverse' : 'row', alignItems: 'flex-end', gap: 8 }}>
+                  {!isMine && <Avatar user={sender} size={28} />}
+                  <div style={{
+                    maxWidth: '65%', padding: '8px 12px', borderRadius: 14,
+                    background: isMine ? 'var(--accent)' : 'var(--bg-mid)',
+                    color: isMine ? '#fff' : 'var(--text)',
+                    fontSize: 13,
+                  }}>
+                    {!isMine && sender && <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 3, opacity: .75 }}>{dname(sender)}</div>}
+                    {m.content}
+                  </div>
+                </div>
+              )
+            })}
+            <div ref={chatEndRef} />
+          </div>
+          {isMember && (
+            <form onSubmit={sendGroupMsg} style={{ display: 'flex', gap: 8, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
+              <input
+                style={{ flex: 1, padding: '8px 14px', background: 'var(--bg-mid)', border: '1px solid var(--border)', borderRadius: 20, color: 'var(--text)', fontSize: 13, outline: 'none' }}
+                placeholder="Type a message…"
+                value={chatInput}
+                onChange={e => setChatInput(e.target.value)}
+              />
+              <button className="btn btn-primary btn-sm" type="submit">Send</button>
+            </form>
+          )}
+          {!isMember && <div style={{ textAlign: 'center', padding: 12, fontSize: 13, color: 'var(--text-dim)' }}>Join the group to send messages</div>}
         </div>
       )}
 

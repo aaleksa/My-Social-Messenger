@@ -14,7 +14,8 @@ export const useStore = create((set, get) => ({
 
   // ── Navigation ──────────────────────────────────────────
   page: 'feed',
-  setPage: (page) => set({ page }),
+  viewUserId: null,
+  setPage: (page, extra) => set({ page, viewUserId: extra?.userId ?? null }),
 
   // ── Users / Online ──────────────────────────────────────
   users:     [],

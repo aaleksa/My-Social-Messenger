@@ -3,7 +3,7 @@ import { useStore } from '../../store'
 import { apiForm } from '../../lib/api'
 import Avatar from '../ui/Avatar'
 
-export default function PostCreate({ onPost }) {
+export default function PostCreate({ onPost, groupId }) {
   const { tok, me } = useStore()
   const [content, setContent] = useState('')
   const [vis, setVis] = useState('public')
@@ -18,7 +18,8 @@ export default function PostCreate({ onPost }) {
     try {
       const fd = new FormData()
       fd.append('content', content)
-      fd.append('privacy', vis)
+      fd.append('privacy', groupId ? 'group' : vis)
+      if (groupId) fd.append('group_id', groupId)
       if (image) fd.append('image', image)
       const post = await apiForm(tok, '/api/posts', fd)
       onPost?.(post)
@@ -56,12 +57,14 @@ export default function PostCreate({ onPost }) {
         <button type="button" className="pbar-btn" onClick={pickFile}>
           <i className="bi bi-image" /> Photo
         </button>
-        <select className="fg" style={{ padding: '5px 10px', fontSize: 12, background: 'var(--bg-mid)', border: '1px solid var(--border)', color: 'var(--text)', borderRadius: 8 }}
-          value={vis} onChange={e => setVis(e.target.value)}>
-          <option value="public">🌍 Public</option>
-          <option value="almost_private">👥 Followers</option>
-          <option value="private">🔒 Private</option>
-        </select>
+        {!groupId && (
+          <select className="fg" style={{ padding: '5px 10px', fontSize: 12, background: 'var(--bg-mid)', border: '1px solid var(--border)', color: 'var(--text)', borderRadius: 8 }}
+            value={vis} onChange={e => setVis(e.target.value)}>
+            <option value="public">🌍 Public</option>
+            <option value="almost_private">👥 Followers</option>
+            <option value="private">🔒 Private</option>
+          </select>
+        )}
         <div style={{ flex: 1 }} />
         <button className="btn btn-primary btn-sm" type="submit" disabled={loading || (!content.trim() && !image)}>
           {loading ? <span className="spinner" /> : 'Post'}

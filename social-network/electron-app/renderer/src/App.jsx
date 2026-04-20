@@ -9,10 +9,11 @@ import Feed from './components/feed/Feed'
 import Chat from './components/chat/Chat'
 import Groups from './components/groups/Groups'
 import Profile from './components/profile/Profile'
+import UserProfile from './components/profile/UserProfile'
 import People from './components/people/People'
 import Notifications from './components/notifications/Notifications'
 
-const PAGES = { feed: Feed, profile: Profile, people: People, groups: Groups, chat: Chat, notifications: Notifications }
+const PAGES = { feed: Feed, profile: Profile, userprofile: UserProfile, people: People, groups: Groups, chat: Chat, notifications: Notifications }
 
 export default function App() {
   const store = useStore

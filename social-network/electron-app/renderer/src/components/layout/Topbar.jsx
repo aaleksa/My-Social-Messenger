@@ -6,7 +6,7 @@ export default function Topbar() {
   const { me, tok, setPage, notifCnt, resetNotif, wsOn, clearAuth } = useStore()
 
   async function doLogout() {
-    try { await apiFetch(tok, '/api/logout', { method: 'POST' }) } catch (_) {}
+    try { await apiFetch(tok, '/api/auth/logout', { method: 'POST' }) } catch (_) {}
     if (window.electronAPI) window.electronAPI.clearSession()
     clearAuth()
   }

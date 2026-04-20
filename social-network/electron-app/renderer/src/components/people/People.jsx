@@ -4,7 +4,7 @@ import { apiFetch, dname, avSrc, inits } from '../../lib/api'
 import Avatar from '../ui/Avatar'
 
 export default function People() {
-  const { tok, me, users, setUsers } = useStore()
+  const { tok, me, users, setUsers, setPage } = useStore()
   const [search, setSearch] = useState('')
   const [followStates, setFollowStates] = useState({})
   const [loading, setLoading] = useState(true)
@@ -14,6 +14,12 @@ export default function People() {
       .then(d => {
         const list = (d || []).filter(u => u.id !== me?.id)
         setUsers(list)
+        // init follow state from API response
+        const states = {}
+        list.forEach(u => {
+          states[u.id] = u.follow_status === 'following' || u.follow_status === 'pending'
+        })
+        setFollowStates(states)
       })
       .catch(() => {})
       .finally(() => setLoading(false))
@@ -27,10 +33,10 @@ export default function People() {
     const isFollowing = followStates[uid]
     try {
       if (isFollowing) {
-        await apiFetch(tok, `/api/unfollow/${uid}`, { method: 'POST' })
+        await apiFetch(tok, `/api/follow?following_id=${uid}`, { method: 'DELETE' })
         setFollowStates(p => ({ ...p, [uid]: false }))
       } else {
-        await apiFetch(tok, `/api/follow/${uid}`, { method: 'POST' })
+        await apiFetch(tok, '/api/follow', { method: 'POST', body: JSON.stringify({ following_id: uid }) })
         setFollowStates(p => ({ ...p, [uid]: true }))
       }
     } catch (_) {}
@@ -51,8 +57,10 @@ export default function People() {
       <div className="people-grid">
         {filtered.map(u => (
           <div key={u.id} className="people-card">
-            <Avatar user={u} size={52} className="people-av" />
-            <div className="people-name">{dname(u)}</div>
+            <div style={{ cursor: 'pointer' }} onClick={() => setPage('userprofile', { userId: u.id })}>
+              <Avatar user={u} size={52} className="people-av" />
+            </div>
+            <div className="people-name" style={{ cursor: 'pointer' }} onClick={() => setPage('userprofile', { userId: u.id })}>{dname(u)}</div>
             {u.nickname && <div className="people-nick">@{u.nickname}</div>}
             <button
               className={`btn btn-sm ${followStates[u.id] ? 'btn-secondary' : 'btn-primary'}`}
