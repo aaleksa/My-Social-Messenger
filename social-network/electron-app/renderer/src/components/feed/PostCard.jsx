@@ -5,6 +5,7 @@ import Avatar from '../ui/Avatar'
 
 export default function PostCard({ post, onDelete }) {
   const { tok, me, users, setPage } = useStore()
+  const postId = post.id || post.post_id   // normalize both shapes
   const [showComments, setShowComments] = useState(false)
   const [comments, setComments] = useState(null)
   const [cin, setCin] = useState('')
@@ -19,7 +20,7 @@ export default function PostCard({ post, onDelete }) {
   async function loadComments() {
     if (comments !== null) { setShowComments(v => !v); return }
     try {
-      const data = await apiFetch(tok, `/api/posts/comment?post_id=${post.id}`)
+      const data = await apiFetch(tok, `/api/posts/comment?post_id=${postId}`)
       setComments(data || [])
       setShowComments(true)
     } catch (_) {}
@@ -38,7 +39,7 @@ export default function PostCard({ post, onDelete }) {
       }
       const c = await apiFetch(tok, '/api/posts/comment', {
         method: 'POST',
-        body: JSON.stringify({ post_id: post.id, content: cin, image: imageUrl }),
+        body: JSON.stringify({ post_id: postId, content: cin, image: imageUrl }),
       })
       setComments(prev => [...(prev || []), c])
       setCin('')
@@ -66,7 +67,7 @@ export default function PostCard({ post, onDelete }) {
     try {
       const res = await apiFetch(tok, '/api/posts/like', {
         method: 'POST',
-        body: JSON.stringify({ post_id: post.id }),
+        body: JSON.stringify({ post_id: postId }),
       })
       setLiked(res.liked)
       setLikesCount(res.likes)
@@ -81,8 +82,8 @@ export default function PostCard({ post, onDelete }) {
   async function doDelete() {
     if (!confirm('Delete this post?')) return
     try {
-      await apiFetch(tok, `/api/posts?id=${post.id}`, { method: 'DELETE' })
-      onDelete?.(post.id)
+      await apiFetch(tok, `/api/posts?id=${postId}`, { method: 'DELETE' })
+      onDelete?.(postId)
     } catch (_) {}
   }
 
