@@ -15,7 +15,12 @@ export default function PostCard({ post, onDelete }) {
   const [likesCount, setLikesCount] = useState(post.likes || 0)
   const [likeLoading, setLikeLoading] = useState(false)
 
-  const author = users.find(u => u.id === post.user_id) || { id: post.user_id }
+  const author = users.find(u => u.id === post.user_id) || {
+    id: post.user_id,
+    first_name: post.author_first_name || '',
+    last_name:  post.author_last_name  || '',
+    avatar:     post.author_avatar     || '',
+  }
 
   async function loadComments() {
     if (comments !== null) { setShowComments(v => !v); return }

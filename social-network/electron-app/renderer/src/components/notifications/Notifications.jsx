@@ -1,10 +1,32 @@
 import { useState, useEffect } from 'react'
 import { useStore } from '../../store'
-import { apiFetch, fmtD } from '../../lib/api'
+import { apiFetch, fmtD, API } from '../../lib/api'
 
 const ICONS = {
-  follow: '👤', follow_request: '👤', like: '❤️', comment: '💬',
-  group_invite: '👥', group_join: '👥', event: '📅', message: '💬',
+  follow: '👤', follow_request: '👤', follow_accepted: '✅',
+  like: '❤️', comment: '💬',
+  group_invite: '👥', group_join: '👥', group_join_request: '👥',
+  group_join_accepted: '✅', group_event: '📅',
+  event: '📅', message: '💬',
+}
+
+function notifText(n) {
+  const actor = [n.actor_first_name, n.actor_last_name].filter(Boolean).join(' ') || 'Someone'
+  const group = n.group_title || ''
+  switch (n.type) {
+    case 'follow':              return `${actor} started following you`
+    case 'follow_request':      return `${actor} sent you a follow request`
+    case 'follow_accepted':     return `${actor} accepted your follow request`
+    case 'like':                return `${actor} liked your post`
+    case 'comment':             return `${actor} commented on your post`
+    case 'group_invite':        return `${actor} invited you to join the group "${group}"`
+    case 'group_join_request':  return `${actor} wants to join your group "${group}"`
+    case 'group_join':          return `${actor} joined the group "${group}"`
+    case 'group_join_accepted': return `Your request to join "${group}" was accepted`
+    case 'group_event':         return `New event in group "${group}"`
+    case 'message':             return `New message from ${actor}`
+    default:                    return n.content || `New notification from ${actor}`
+  }
 }
 
 export default function Notifications() {
@@ -71,9 +93,17 @@ export default function Notifications() {
       )}
       {notifs.map(n => (
         <div key={n.id} className={`notif-item ${!n.is_read ? 'unread' : ''}`} onClick={() => !n.is_read && markRead(n.id)}>
-          <div className="notif-icon-big">{ICONS[n.type] || '🔔'}</div>
-          <div style={{ flex: 1 }}>
-            <div className="notif-text">{n.content}</div>
+          <div className="notif-icon-big" style={{ position: 'relative', flexShrink: 0 }}>
+            {n.actor_avatar
+              ? <img src={`${API}/uploads/${n.actor_avatar}`} alt="" style={{ width: 42, height: 42, borderRadius: '50%', objectFit: 'cover' }} />
+              : <div style={{ width: 42, height: 42, borderRadius: '50%', background: '#6c5ce7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: '#fff', fontWeight: 700 }}>
+                  {[n.actor_first_name, n.actor_last_name].filter(Boolean).map(s => s[0]).join('') || '?'}
+                </div>
+            }
+            <span style={{ position: 'absolute', bottom: -2, right: -4, fontSize: 16, lineHeight: 1 }}>{ICONS[n.type] || '🔔'}</span>
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="notif-text" style={{ fontWeight: !n.is_read ? 600 : 400 }}>{notifText(n)}</div>
             <div className="notif-time">{fmtD(n.created_at)}</div>
             {(n.type === 'follow_request') && !n.is_read && (
               <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
