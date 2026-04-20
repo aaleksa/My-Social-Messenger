@@ -2,6 +2,8 @@ const { app, BrowserWindow, ipcMain, Notification, dialog, session, shell } = re
 const path = require('path');
 const fs = require('fs');
 
+app.setName('Social Messenger');
+
 const SESSION_FILE = path.join(app.getPath('userData'), 'session.json');
 const REGISTER_URL = 'http://localhost:3000/register';
 
