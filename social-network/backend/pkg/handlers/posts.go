@@ -62,9 +62,20 @@ func (h *PostHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Return full post object
+	var p models.Post
+	h.DB.QueryRow(
+		`SELECT p.id, p.user_id, p.group_id, p.content, p.image, p.privacy, p.created_at,
+		        COALESCE(u.first_name,''), COALESCE(u.last_name,''), COALESCE(u.avatar,'')
+		 FROM posts p LEFT JOIN users u ON u.id = p.user_id WHERE p.id = ?`, postID,
+	).Scan(&p.ID, &p.UserID, &p.GroupID, &p.Content, &p.Image, &p.Privacy, &p.CreatedAt,
+		&p.AuthorFirstName, &p.AuthorLastName, &p.AuthorAvatar)
+	p.Likes = 0
+	p.Liked = false
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]int64{"post_id": postID})
+	json.NewEncoder(w).Encode(p)
 }
 
 // GET /api/posts?user_id=1 or /api/posts?group_id=1

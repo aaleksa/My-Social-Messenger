@@ -34,14 +34,21 @@ export default function PostCreate({ onPost, groupId }) {
     if (!content.trim() && !image) return
     setLoading(true)
     try {
-      const fd = new FormData()
-      fd.append('content', content)
-      fd.append('privacy', groupId ? 'group' : vis)
-      if (groupId) fd.append('group_id', groupId)
-      if (image) fd.append('image', image)
-      if (vis === 'private' && allowed.size > 0)
-        fd.append('allowed_users', JSON.stringify([...allowed]))
-      const post = await apiForm(tok, '/api/posts', fd)
+      let imageUrl = ''
+      if (image) {
+        const fd = new FormData()
+        fd.append('image', image)
+        const up = await apiForm(tok, '/api/upload', fd)
+        imageUrl = up?.url || ''
+      }
+      const body = {
+        content,
+        privacy: groupId ? 'public' : vis,
+        image: imageUrl,
+        ...(groupId ? { group_id: Number(groupId) } : {}),
+        ...(vis === 'private' && allowed.size > 0 ? { allowed_users: [...allowed] } : {}),
+      }
+      const post = await apiFetch(tok, '/api/posts', { method: 'POST', body: JSON.stringify(body) })
       onPost?.(post)
       setContent(''); setImage(null); setAllowed(new Set())
     } catch (_) {}
