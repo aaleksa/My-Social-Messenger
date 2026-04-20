@@ -8,6 +8,7 @@ type Post = {
   id: number; user_id: number; content: string; image: string;
   privacy: string; created_at: string;
   author_first_name: string; author_last_name: string; author_avatar: string;
+  likes: number; liked: boolean;
 };
 type UserMin = { id: number; first_name: string; last_name: string; avatar: string };
 
@@ -162,7 +163,7 @@ export default function FeedPage() {
             <div style={{ fontSize: 48, marginBottom: "0.5rem" }}>📭</div>
             <p>No posts yet. Be the first to post!</p>
           </div>
-        ) : posts.map(p => <PostCard key={p.id} post={p} />)}
+        ) : posts.map(p => <PostCard key={p.id} post={p} meId={meId} onDelete={id => setPosts(prev => prev.filter(x => x.id !== id))} />)}
       </main>
 
       <RightPanel />
@@ -170,11 +171,33 @@ export default function FeedPage() {
   );
 }
 
-function PostCard({ post }: { post: Post }) {
+function PostCard({ post, meId, onDelete }: { post: Post; meId: number | null; onDelete?: (id: number) => void }) {
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<any[]>([]);
   const [commentText, setCommentText] = useState("");
   const [commentImage, setCommentImage] = useState("");
+  const [liked, setLiked] = useState(post.liked || false);
+  const [likesCount, setLikesCount] = useState(post.likes || 0);
+  const [likeLoading, setLikeLoading] = useState(false);
+
+  async function handleLike() {
+    if (likeLoading) return;
+    setLikeLoading(true);
+    try {
+      const res: any = await api.toggleLike(post.id);
+      setLiked(res.liked);
+      setLikesCount(res.likes);
+    } catch {}
+    setLikeLoading(false);
+  }
+
+  async function handleDelete() {
+    if (!confirm("Delete this post?")) return;
+    try {
+      await api.deletePost(post.id);
+      onDelete?.(post.id);
+    } catch {}
+  }
 
   async function loadComments() {
     try { setComments((await api.listComments(post.id)) || []); } catch {}
@@ -221,7 +244,7 @@ function PostCard({ post }: { post: Post }) {
             : <span style={{ fontWeight: 700, color: "var(--accent)" }}>{(post.author_first_name?.[0] || post.user_id).toString().toUpperCase()}</span>
           }
         </div>
-        <div>
+        <div style={{ flex: 1 }}>
           <a href={`/profile/${post.user_id}`} style={{ fontWeight: 600, fontSize: 14, color: "var(--text)", textDecoration: "none" }}>
             {post.author_first_name || post.author_last_name
               ? `${post.author_first_name} ${post.author_last_name}`.trim()
@@ -231,6 +254,14 @@ function PostCard({ post }: { post: Post }) {
             {new Date(post.created_at).toLocaleString()} · {privacyLabel[post.privacy] ?? ""}
           </div>
         </div>
+        {meId === post.user_id && (
+          <button onClick={handleDelete} style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: 16, padding: "4px 8px", borderRadius: "var(--radius)" }}
+            title="Delete post"
+            onMouseEnter={e => (e.currentTarget.style.color = "#fa3e3e")}
+            onMouseLeave={e => (e.currentTarget.style.color = "var(--text-muted)")}>
+            🗑
+          </button>
+        )}
       </div>
 
       {/* Content */}
@@ -242,10 +273,20 @@ function PostCard({ post }: { post: Post }) {
 
       {/* Actions */}
       <div style={{ borderTop: "1px solid var(--border)", display: "flex" }}>
+        <button onClick={handleLike} disabled={likeLoading} style={{
+          flex: 1, padding: "0.6rem", background: "none", border: "none",
+          color: liked ? "#e0245e" : "var(--text-muted)", fontSize: 14, fontWeight: liked ? 600 : 500,
+          transition: "background .15s", cursor: "pointer",
+        }}
+          onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "var(--bg-hover)"}
+          onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "none"}
+        >
+          {liked ? "❤️" : "🤍"} {likesCount > 0 ? likesCount : ""} Like
+        </button>
         <button onClick={toggleComments} style={{
           flex: 1, padding: "0.6rem", background: "none", border: "none",
           color: "var(--text-muted)", fontSize: 14, fontWeight: 500,
-          transition: "background .15s",
+          transition: "background .15s", cursor: "pointer",
         }}
           onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "var(--bg-hover)"}
           onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "none"}

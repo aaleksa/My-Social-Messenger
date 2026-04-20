@@ -39,6 +39,8 @@ export const api = {
 
   // Posts
   createPost: (data: object) => request("/api/posts", { method: "POST", body: JSON.stringify(data) }),
+  deletePost: (postId: number) => request(`/api/posts?id=${postId}`, { method: "DELETE" }),
+  toggleLike: (postId: number) => request("/api/posts/like", { method: "POST", body: JSON.stringify({ post_id: postId }) }),
   listPosts: (params?: { user_id?: number; group_id?: number }) => {
     const q = params ? "?" + new URLSearchParams(params as any).toString() : "";
     return request(`/api/posts${q}`);

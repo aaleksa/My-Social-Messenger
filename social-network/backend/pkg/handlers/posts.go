@@ -15,7 +15,15 @@ type PostHandler struct {
 }
 
 func NewPostHandler(db *sqlite.DB) *PostHandler {
-	return &PostHandler{DB: db}
+	ph := &PostHandler{DB: db}
+	// ensure post_likes table exists
+	db.Exec(`CREATE TABLE IF NOT EXISTS post_likes (
+		post_id INTEGER NOT NULL,
+		user_id INTEGER NOT NULL,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		PRIMARY KEY (post_id, user_id)
+	)`)
+	return ph
 }
 
 // POST /api/posts
@@ -126,6 +134,12 @@ func (h *PostHandler) ListPosts(w http.ResponseWriter, r *http.Request) {
 		var p models.Post
 		rows.Scan(&p.ID, &p.UserID, &p.GroupID, &p.Content, &p.Image, &p.Privacy, &p.CreatedAt,
 			&p.AuthorFirstName, &p.AuthorLastName, &p.AuthorAvatar)
+		// likes count
+		h.DB.QueryRow(`SELECT COUNT(*) FROM post_likes WHERE post_id = ?`, p.ID).Scan(&p.Likes)
+		// did viewer like it?
+		var likedInt int
+		h.DB.QueryRow(`SELECT COUNT(*) FROM post_likes WHERE post_id = ? AND user_id = ?`, p.ID, viewerID).Scan(&likedInt)
+		p.Liked = likedInt > 0
 		posts = append(posts, p)
 	}
 
@@ -184,4 +198,65 @@ func (h *PostHandler) ListComments(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(comments)
+}
+
+// DELETE /api/posts?id=:id
+func (h *PostHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserID(r)
+	postID, err := strconv.ParseInt(r.URL.Query().Get("id"), 10, 64)
+	if err != nil || postID == 0 {
+		http.Error(w, "invalid post id", http.StatusBadRequest)
+		return
+	}
+
+	// Only owner can delete
+	var ownerID int64
+	row := h.DB.QueryRow(`SELECT user_id FROM posts WHERE id = ?`, postID)
+	if err := row.Scan(&ownerID); err != nil || ownerID != userID {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+
+	h.DB.Exec(`DELETE FROM post_likes WHERE post_id = ?`, postID)
+	h.DB.Exec(`DELETE FROM post_allowed_users WHERE post_id = ?`, postID)
+	h.DB.Exec(`DELETE FROM comments WHERE post_id = ?`, postID)
+	_, err = h.DB.Exec(`DELETE FROM posts WHERE id = ?`, postID)
+	if err != nil {
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// POST /api/posts/like  body: {post_id: N}
+// Returns {liked: bool, likes: N}
+func (h *PostHandler) ToggleLike(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserID(r)
+	var req struct {
+		PostID int64 `json:"post_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.PostID == 0 {
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+
+	// Check if already liked
+	var exists int
+	h.DB.QueryRow(`SELECT COUNT(*) FROM post_likes WHERE post_id = ? AND user_id = ?`, req.PostID, userID).Scan(&exists)
+
+	var liked bool
+	if exists > 0 {
+		h.DB.Exec(`DELETE FROM post_likes WHERE post_id = ? AND user_id = ?`, req.PostID, userID)
+		liked = false
+	} else {
+		h.DB.Exec(`INSERT OR IGNORE INTO post_likes (post_id, user_id) VALUES (?, ?)`, req.PostID, userID)
+		liked = true
+	}
+
+	var count int64
+	h.DB.QueryRow(`SELECT COUNT(*) FROM post_likes WHERE post_id = ?`, req.PostID).Scan(&count)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{"liked": liked, "likes": count})
 }

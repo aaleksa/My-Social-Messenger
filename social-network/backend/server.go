@@ -97,10 +97,13 @@ func main() {
 	mux.Handle("/api/posts", protected(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
 			postHandler.CreatePost(w, r)
+		} else if r.Method == http.MethodDelete {
+			postHandler.DeletePost(w, r)
 		} else {
 			postHandler.ListPosts(w, r)
 		}
 	}))
+	mux.Handle("/api/posts/like", protected(postHandler.ToggleLike))
 	mux.Handle("/api/posts/comment", protected(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
 			postHandler.CreateComment(w, r)

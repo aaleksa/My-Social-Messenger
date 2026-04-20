@@ -8,7 +8,9 @@ export default function PostCard({ post, onDelete }) {
   const [showComments, setShowComments] = useState(false)
   const [comments, setComments] = useState(null)
   const [cin, setCin] = useState('')
-  const [liked, setLiked] = useState(false)
+  const [liked, setLiked] = useState(post.liked || false)
+  const [likesCount, setLikesCount] = useState(post.likes || 0)
+  const [likeLoading, setLikeLoading] = useState(false)
 
   const author = users.find(u => u.id === post.user_id) || { id: post.user_id }
 
@@ -34,10 +36,28 @@ export default function PostCard({ post, onDelete }) {
     } catch (_) {}
   }
 
+  async function doLike() {
+    if (likeLoading) return
+    setLikeLoading(true)
+    try {
+      const res = await apiFetch(tok, '/api/posts/like', {
+        method: 'POST',
+        body: JSON.stringify({ post_id: post.id }),
+      })
+      setLiked(res.liked)
+      setLikesCount(res.likes)
+    } catch (_) {
+      // optimistic fallback
+      setLiked(v => !v)
+      setLikesCount(c => liked ? c - 1 : c + 1)
+    }
+    setLikeLoading(false)
+  }
+
   async function doDelete() {
     if (!confirm('Delete this post?')) return
     try {
-      await apiFetch(tok, `/api/posts/${post.id}`, { method: 'DELETE' })
+      await apiFetch(tok, `/api/posts?id=${post.id}`, { method: 'DELETE' })
       onDelete?.(post.id)
     } catch (_) {}
   }
@@ -47,7 +67,11 @@ export default function PostCard({ post, onDelete }) {
       <div className="post-head">
         <Avatar user={author} size={38} className="pav" />
         <div className="post-meta">
-          <div className="post-author" onClick={() => setPage('profile')}>{dname(author)}</div>
+          <div className="post-author" style={{ cursor: 'pointer' }} onClick={() =>
+            post.user_id === me?.id
+              ? setPage('profile')
+              : setPage('userprofile', { userId: post.user_id })
+          }>{dname(author)}</div>
           <div className="post-time">{fmtD(post.created_at)}</div>
         </div>
         {post.user_id === me?.id && (
@@ -57,8 +81,8 @@ export default function PostCard({ post, onDelete }) {
       {post.content && <div className="post-body">{post.content}</div>}
       {post.image && <img className="post-img" src={`${API}/uploads/${post.image}`} alt="" />}
       <div className="post-foot">
-        <button className={`post-btn ${liked ? 'liked' : ''}`} onClick={() => setLiked(v => !v)}>
-          <i className={`bi bi-heart${liked ? '-fill' : ''}`} /> {(post.likes || 0) + (liked ? 1 : 0)}
+        <button className={`post-btn ${liked ? 'liked' : ''}`} onClick={doLike} disabled={likeLoading}>
+          <i className={`bi bi-heart${liked ? '-fill' : ''}`} /> {likesCount || 0}
         </button>
         <button className="post-btn" onClick={loadComments}>
           <i className="bi bi-chat" /> Comments

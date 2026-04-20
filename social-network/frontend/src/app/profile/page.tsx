@@ -134,16 +134,7 @@ export default function ProfilePage() {
           <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: "2rem", textAlign: "center", color: "var(--text-muted)" }}>
             No posts yet
           </div>
-        ) : posts.map((p: any) => (
-          <div key={p.id} style={{
-            background: "var(--bg-card)", border: "1px solid var(--border)",
-            borderRadius: "var(--radius)", padding: "1rem", marginBottom: "0.75rem", boxShadow: "var(--shadow)",
-          }}>
-            <p style={{ marginBottom: "0.5rem" }}>{p.content}</p>
-            {p.image && <img src={p.image} alt="" style={{ maxWidth: "100%", borderRadius: "var(--radius)", marginBottom: "0.5rem" }} />}
-            <small style={{ color: "var(--text-muted)" }}>{new Date(p.created_at).toLocaleString()}</small>
-          </div>
-        ))
+        ) : posts.map((p: any) => <PostCard key={p.id} post={p} meId={user!.id} onDelete={id => setPosts(prev => prev.filter((x: any) => x.id !== id))} />)
         )}
 
         {/* Followers */}
@@ -168,6 +159,46 @@ export default function ProfilePage() {
           )
         )}
       </main>
+    </div>
+  );
+}
+
+function PostCard({ post, meId, onDelete }: { post: any; meId: number | null; onDelete?: (id: number) => void }) {
+  const [liked, setLiked] = useState(post.liked || false);
+  const [likesCount, setLikesCount] = useState(post.likes || 0);
+  const [likeLoading, setLikeLoading] = useState(false);
+
+  async function handleLike() {
+    if (likeLoading) return;
+    setLikeLoading(true);
+    try { const r: any = await api.toggleLike(post.id); setLiked(r.liked); setLikesCount(r.likes); } catch {}
+    setLikeLoading(false);
+  }
+
+  async function handleDelete() {
+    if (!confirm("Delete this post?")) return;
+    try { await api.deletePost(post.id); onDelete?.(post.id); } catch {}
+  }
+
+  return (
+    <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "var(--radius)", marginBottom: "0.75rem", boxShadow: "var(--shadow)", overflow: "hidden" }}>
+      <div style={{ padding: "0.75rem 1rem 0.5rem", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <small style={{ color: "var(--text-muted)" }}>{new Date(post.created_at).toLocaleString()}</small>
+        {meId === post.user_id && (
+          <button onClick={handleDelete} style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: 16 }}
+            onMouseEnter={e => (e.currentTarget.style.color = "#fa3e3e")}
+            onMouseLeave={e => (e.currentTarget.style.color = "var(--text-muted)")}>
+            🗑
+          </button>
+        )}
+      </div>
+      <div style={{ padding: "0 1rem 0.75rem", fontSize: 15 }}>{post.content}</div>
+      {post.image && <img src={post.image} alt="" style={{ width: "100%", maxHeight: 400, objectFit: "cover" }} />}
+      <div style={{ borderTop: "1px solid var(--border)", display: "flex" }}>
+        <button onClick={handleLike} disabled={likeLoading} style={{ flex: 1, padding: "0.6rem", background: "none", border: "none", color: liked ? "#e0245e" : "var(--text-muted)", fontSize: 14, fontWeight: liked ? 600 : 500, cursor: "pointer" }}>
+          {liked ? "❤️" : "🤍"} {likesCount > 0 ? likesCount : ""} Like
+        </button>
+      </div>
     </div>
   );
 }

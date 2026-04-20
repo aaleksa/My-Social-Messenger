@@ -11,6 +11,8 @@ type Post struct {
 	Privacy         string    `json:"privacy"`
 	CreatedAt       time.Time `json:"created_at"`
 	AllowedUsers    []int64   `json:"allowed_users,omitempty"`
+	Likes           int64     `json:"likes"`
+	Liked           bool      `json:"liked"`
 	AuthorFirstName string    `json:"author_first_name"`
 	AuthorLastName  string    `json:"author_last_name"`
 	AuthorAvatar    string    `json:"author_avatar,omitempty"`
