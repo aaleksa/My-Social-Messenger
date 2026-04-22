@@ -15,17 +15,20 @@ export default function Profile() {
   const [form, setForm] = useState({})
   const [avatarFile, setAvatarFile] = useState(null)
 
+  const [pending, setPending] = useState([])
+
   useEffect(() => {
     if (!me) return
     apiFetch(tok, `/api/posts?user_id=${me.id}`).then(d => setPosts(d || [])).catch(() => {})
-    apiFetch(tok, `/api/follow?user_id=${me.id}`).then(d => setFollowers(d?.followers || [])).catch(() => {})
-    apiFetch(tok, `/api/follow/following?user_id=${me.id}`).then(d => setFollowing(d?.following || [])).catch(() => {})
+    apiFetch(tok, `/api/follow?user_id=${me.id}`).then(d => setFollowers(Array.isArray(d) ? d : [])).catch(() => {})
+    apiFetch(tok, `/api/follow/following?user_id=${me.id}`).then(d => setFollowing(Array.isArray(d) ? d : [])).catch(() => {})
+    apiFetch(tok, `/api/follow/requests`).then(d => setPending(Array.isArray(d) ? d : [])).catch(() => {})
     setForm({
       first_name: me.first_name || '',
       last_name: me.last_name || '',
       nickname: me.nickname || '',
       about_me: me.about_me || '',
-      privacy: me.privacy || 'public',
+      privacy: me.is_public === false ? 'private' : 'public',
     })
   }, [me?.id])
 
@@ -69,9 +72,11 @@ export default function Profile() {
       </div>
 
       <div className="tabs">
-        {['posts', 'followers', 'following'].map(t => (
+        {['posts', 'followers', 'following', 'requests'].map(t => (
           <button key={t} className={`tab ${tab === t ? 'active' : ''}`} onClick={() => setTab(t)}>
-            {t.charAt(0).toUpperCase() + t.slice(1)}
+            {t === 'requests'
+              ? `Requests${pending.length > 0 ? ` (${pending.length})` : ''}`
+              : t.charAt(0).toUpperCase() + t.slice(1)}
           </button>
         ))}
       </div>
@@ -89,6 +94,25 @@ export default function Profile() {
           <div>{dname(u)}</div>
         </div>
       ))}
+      {tab === 'requests' && (
+        pending.length === 0
+          ? <div className="empty"><div className="ei">🤝</div>No pending requests</div>
+          : pending.map(u => (
+            <div key={u.id} className="card" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <Avatar user={u} size={38} />
+              <div style={{ flex: 1 }}>{dname(u)}</div>
+              <button className="btn btn-primary btn-sm" onClick={async () => {
+                await apiFetch(tok, '/api/follow/respond', { method: 'POST', body: JSON.stringify({ follower_id: u.id, accept: true }) }).catch(() => {})
+                setPending(p => p.filter(x => x.id !== u.id))
+                setFollowers(p => [...p, u])
+              }}>Accept</button>
+              <button className="btn btn-secondary btn-sm" onClick={async () => {
+                await apiFetch(tok, '/api/follow/respond', { method: 'POST', body: JSON.stringify({ follower_id: u.id, accept: false }) }).catch(() => {})
+                setPending(p => p.filter(x => x.id !== u.id))
+              }}>Decline</button>
+            </div>
+          ))
+      )}
 
       {showEdit && (
         <Modal title="Edit Profile" onClose={() => setShowEdit(false)}>

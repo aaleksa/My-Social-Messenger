@@ -45,6 +45,7 @@ export const api = {
     request("/api/follow/respond", { method: "POST", body: JSON.stringify({ follower_id: followerId, accept }) }),
   listFollowers: (userId: number) => request(`/api/follow?user_id=${userId}`),
   listFollowing: (userId: number) => request(`/api/follow/following?user_id=${userId}`),
+  listFollowRequests: () => request(`/api/follow/requests`),
 
   // Posts
   createPost: (data: object) => request("/api/posts", { method: "POST", body: JSON.stringify(data) }),

@@ -42,8 +42,7 @@ export default function People() {
       } else {
         await apiFetch(tok, '/api/follow', { method: 'POST', body: JSON.stringify({ following_id: uid }) })
         const target = users.find(u => u.id === uid)
-        const isPrivate = target?.privacy === 'private'
-        setFollowStates(p => ({ ...p, [uid]: isPrivate ? 'pending' : 'following' }))
+        setFollowStates(p => ({ ...p, [uid]: !target?.is_public ? 'pending' : 'following' }))
       }
     } catch (_) {}
   }

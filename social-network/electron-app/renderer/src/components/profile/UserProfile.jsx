@@ -17,8 +17,8 @@ export default function UserProfile() {
     if (!viewUserId) return
     apiFetch(tok, `/api/profile?user_id=${viewUserId}`).then(d => setUser(d)).catch(() => {})
     apiFetch(tok, `/api/posts?user_id=${viewUserId}`).then(d => setPosts(d || [])).catch(() => {})
-    apiFetch(tok, `/api/follow?user_id=${viewUserId}`).then(d => setFollowers(d?.followers || [])).catch(() => {})
-    apiFetch(tok, `/api/follow/following?user_id=${viewUserId}`).then(d => setFollowing(d?.following || [])).catch(() => {})
+    apiFetch(tok, `/api/follow?user_id=${viewUserId}`).then(d => setFollowers(Array.isArray(d) ? d : [])).catch(() => {})
+    apiFetch(tok, `/api/follow/following?user_id=${viewUserId}`).then(d => setFollowing(Array.isArray(d) ? d : [])).catch(() => {})
     // check if current user follows this user
     apiFetch(tok, '/api/users').then(d => {
       const u = (d || []).find(x => x.id === viewUserId)
@@ -36,7 +36,7 @@ export default function UserProfile() {
         setFollowStatus('none')
       } else {
         await apiFetch(tok, '/api/follow', { method: 'POST', body: JSON.stringify({ following_id: viewUserId }) })
-        setFollowStatus(user?.privacy === 'private' ? 'pending' : 'following')
+        setFollowStatus(!user?.is_public ? 'pending' : 'following')
       }
     } catch (_) {}
   }

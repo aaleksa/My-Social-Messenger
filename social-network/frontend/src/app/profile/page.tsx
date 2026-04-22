@@ -16,7 +16,8 @@ export default function ProfilePage() {
   const [posts, setPosts] = useState<any[]>([]);
   const [followers, setFollowers] = useState<UserMin[]>([]);
   const [following, setFollowing] = useState<UserMin[]>([]);
-  const [tab, setTab] = useState<"posts" | "followers" | "following">("posts");
+  const [pending, setPending] = useState<UserMin[]>([]);
+  const [tab, setTab] = useState<"posts" | "followers" | "following" | "requests">("posts");
   const [isPublic, setIsPublic] = useState(true);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
@@ -25,14 +26,16 @@ export default function ProfilePage() {
     api.getMe().then(async (u: User) => {
       setUser(u);
       setIsPublic(u.is_public);
-      const [p, fols, fowing] = await Promise.all([
+      const [p, fols, fowing, reqs] = await Promise.all([
         api.listPosts({ user_id: u.id }).catch(() => []),
         api.listFollowers(u.id).catch(() => []),
         api.listFollowing(u.id).catch(() => []),
+        api.listFollowRequests().catch(() => []),
       ]);
       setPosts(p || []);
       setFollowers(fols || []);
       setFollowing(fowing || []);
+      setPending(reqs || []);
     }).catch(() => {});
   }, []);
 
@@ -115,15 +118,18 @@ export default function ProfilePage() {
         </div>
 
         {/* Tabs */}
-        <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1.25rem" }}>
-          {(["posts", "followers", "following"] as const).map(t => (
+        <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1.25rem", flexWrap: "wrap" }}>
+          {(["posts", "followers", "following", "requests"] as const).map(t => (
             <button key={t} onClick={() => setTab(t)} style={{
               padding: "0.4rem 1.1rem", borderRadius: "var(--radius)", fontSize: 14, fontWeight: 500,
               border: "1px solid var(--border)", cursor: "pointer",
               background: tab === t ? "var(--accent)" : "var(--bg-card)",
               color: tab === t ? "#fff" : "var(--text)",
             }}>
-              {t === "posts" ? `Posts (${posts.length})` : t === "followers" ? `Followers (${followers.length})` : `Following (${following.length})`}
+              {t === "posts" ? `Posts (${posts.length})`
+                : t === "followers" ? `Followers (${followers.length})`
+                : t === "following" ? `Following (${following.length})`
+                : `Requests${pending.length > 0 ? ` (${pending.length})` : ""}`}
             </button>
           ))}
         </div>
@@ -155,6 +161,33 @@ export default function ProfilePage() {
           ) : (
             <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "var(--radius)", overflow: "hidden", boxShadow: "var(--shadow)" }}>
               {following.map((f, i) => <UserRow key={f.id} u={f} last={i === following.length - 1} />)}
+            </div>
+          )
+        )}
+
+        {/* Follow Requests */}
+        {tab === "requests" && (
+          pending.length === 0 ? (
+            <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: "2rem", textAlign: "center", color: "var(--text-muted)" }}>No pending follow requests</div>
+          ) : (
+            <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "var(--radius)", overflow: "hidden", boxShadow: "var(--shadow)" }}>
+              {pending.map((u, i) => (
+                <div key={u.id} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem 1rem", borderBottom: i < pending.length - 1 ? "1px solid var(--border)" : "none" }}>
+                  <div style={{ width: 38, height: 38, borderRadius: "50%", background: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 700, fontSize: 15, flexShrink: 0 }}>
+                    {(u.first_name[0] || "") + (u.last_name[0] || "")}
+                  </div>
+                  <div style={{ flex: 1 }}><strong>{u.first_name} {u.last_name}</strong></div>
+                  <button onClick={async () => {
+                    await api.respondToFollow(u.id, true).catch(() => {});
+                    setPending(p => p.filter(x => x.id !== u.id));
+                    setFollowers(p => [...p, u]);
+                  }} style={{ padding: "0.35rem 0.9rem", borderRadius: "var(--radius)", background: "var(--accent)", color: "#fff", border: "none", fontWeight: 600, fontSize: 13, cursor: "pointer" }}>Accept</button>
+                  <button onClick={async () => {
+                    await api.respondToFollow(u.id, false).catch(() => {});
+                    setPending(p => p.filter(x => x.id !== u.id));
+                  }} style={{ padding: "0.35rem 0.9rem", borderRadius: "var(--radius)", background: "var(--bg-input)", color: "var(--text)", border: "1px solid var(--border)", fontWeight: 500, fontSize: 13, cursor: "pointer" }}>Decline</button>
+                </div>
+              ))}
             </div>
           )
         )}

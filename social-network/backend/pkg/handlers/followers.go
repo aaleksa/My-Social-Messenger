@@ -193,3 +193,39 @@ func (h *FollowerHandler) ListFollowing(w http.ResponseWriter, r *http.Request) 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(users)
 }
+
+// GET /api/follow/requests  — list pending follow requests sent TO the current user
+func (h *FollowerHandler) PendingRequests(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserID(r)
+
+	rows, err := h.DB.Query(
+		`SELECT u.id, u.first_name, u.last_name, u.avatar
+		 FROM followers f JOIN users u ON u.id = f.follower_id
+		 WHERE f.following_id = ? AND f.status = 'pending'`, userID,
+	)
+	if err != nil {
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	type UserMin struct {
+		ID        int64  `json:"id"`
+		FirstName string `json:"first_name"`
+		LastName  string `json:"last_name"`
+		Avatar    string `json:"avatar"`
+	}
+
+	var users []UserMin
+	for rows.Next() {
+		var u UserMin
+		rows.Scan(&u.ID, &u.FirstName, &u.LastName, &u.Avatar)
+		users = append(users, u)
+	}
+	if users == nil {
+		users = []UserMin{}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(users)
+}

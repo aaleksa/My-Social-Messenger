@@ -104,6 +104,7 @@ func main() {
 	}))
 	mux.Handle("/api/follow/respond", protected(followerHandler.RespondToFollow))
 	mux.Handle("/api/follow/following", protected(followerHandler.ListFollowing))
+	mux.Handle("/api/follow/requests", protected(followerHandler.PendingRequests))
 
 	mux.Handle("/api/posts", protected(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
