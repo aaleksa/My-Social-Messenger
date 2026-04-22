@@ -214,7 +214,8 @@ export default function GroupDetail({ group, onBack }) {
               ))}
             </div>
           )}
-          {isMember && (
+          {/* Invite button — only for creator */}
+          {group.creator_id === me?.id && (
             <div style={{ marginBottom: 12 }}>
               <button className="btn btn-primary btn-sm" onClick={() => { setShowInvite(true); setInviteSearch(''); setInviting({}) }}>
                 <i className="bi bi-person-plus" /> Invite People

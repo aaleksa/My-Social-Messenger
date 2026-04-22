@@ -397,6 +397,7 @@ export default function GroupPage() {
                   </div>
                 )}
 
+                {isOwner && (
                 <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: "1rem", marginBottom: "1.25rem", boxShadow: "var(--shadow)" }}>
                   <h4 style={{ fontWeight: 600, marginBottom: "0.75rem" }}>Invite someone</h4>
                   {nonMembers.length === 0 ? (
@@ -412,6 +413,7 @@ export default function GroupPage() {
                   )}
                   {inviteMsg && <p style={{ fontSize: 13, color: "var(--accent)", marginTop: "0.5rem" }}>{inviteMsg}</p>}
                 </div>
+                )}
 
                 <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "var(--radius)", overflow: "hidden", boxShadow: "var(--shadow)" }}>
                   <div style={{ padding: "0.75rem 1rem", borderBottom: "1px solid var(--border)", fontWeight: 600, fontSize: 14 }}>

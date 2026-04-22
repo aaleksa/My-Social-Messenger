@@ -182,6 +182,14 @@ func (h *GroupHandler) InviteMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Only the group creator can invite
+	var creatorID int64
+	h.DB.QueryRow(`SELECT creator_id FROM groups WHERE id = ?`, req.GroupID).Scan(&creatorID)
+	if inviterID != creatorID {
+		http.Error(w, "only the group creator can invite members", http.StatusForbidden)
+		return
+	}
+
 	_, err := h.DB.Exec(
 		`INSERT OR IGNORE INTO group_members (group_id, user_id, status, invited_by) VALUES (?, ?, 'invited', ?)`,
 		req.GroupID, req.UserID, inviterID,
