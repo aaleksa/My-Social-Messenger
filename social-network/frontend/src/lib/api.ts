@@ -6,6 +6,15 @@ async function request(path: string, options?: RequestInit) {
     headers: { "Content-Type": "application/json", ...options?.headers },
     ...options,
   });
+  if (res.status === 401) {
+    // Not authenticated — redirect to login (only in browser)
+    if (typeof window !== "undefined" &&
+        !window.location.pathname.startsWith("/login") &&
+        !window.location.pathname.startsWith("/register")) {
+      window.location.href = "/login";
+    }
+    throw new Error("Unauthorized");
+  }
   if (!res.ok) {
     const text = await res.text();
     throw new Error(text || res.statusText);
