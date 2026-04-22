@@ -65,10 +65,13 @@ export default function GroupPage() {
     return () => clearInterval(interval);
   }, [group?.my_status, gid]);
 
-  // Load group chat when tab is selected
+  // Load group chat when tab is selected + poll every 5s for new messages
   useEffect(() => {
     if (tab !== "chat" || !gid) return;
-    api.getGroupMessages(gid).then(m => setChatMessages(Array.isArray(m) ? m : [])).catch(() => {});
+    const load = () => api.getGroupMessages(gid).then(m => { if (Array.isArray(m)) setChatMessages(m); }).catch(() => {});
+    load();
+    const interval = setInterval(load, 5000);
+    return () => clearInterval(interval);
   }, [tab, gid]);
 
   // Scroll to bottom when chat messages update

@@ -139,7 +139,7 @@ export default function GroupDetail({ group, onBack }) {
         method: 'POST',
         body: JSON.stringify({ group_id: group.id, content }),
       })
-      pushMsg(chatKey, msg || { id: Date.now(), sender_id: me.id, content, created_at: new Date().toISOString() })
+      pushMsg(chatKey, { id: msg?.id || Date.now(), sender_id: me.id, content, created_at: new Date().toISOString() })
     } catch (_) {}
   }
 
