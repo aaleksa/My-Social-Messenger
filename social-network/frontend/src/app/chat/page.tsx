@@ -113,7 +113,8 @@ function ChatPageInner() {
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, [selected]);
 
-  // Handle incoming WebSocket messages
+  // Handle incoming WebSocket messages — only for non-group (DM) chats
+  // Group chats are handled by polling to avoid duplicates
   useEffect(() => {
     if (!lastMessage) return;
     const sel = selectedRef.current;
@@ -126,17 +127,6 @@ function ChatPageInner() {
       setMessages(prev => [...prev, {
         sender_id: lastMessage.sender_id ?? 0,
         recipient_id: lastMessage.recipient_id,
-        content: lastMessage.content,
-        created_at: lastMessage.created_at,
-      }]);
-    } else if (
-      lastMessage.type === "group_message" &&
-      sel.type === "group" &&
-      lastMessage.group_id === sel.id
-    ) {
-      setMessages(prev => [...prev, {
-        sender_id: lastMessage.sender_id ?? 0,
-        group_id: lastMessage.group_id,
         content: lastMessage.content,
         created_at: lastMessage.created_at,
       }]);

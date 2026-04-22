@@ -79,17 +79,15 @@ export default function GroupPage() {
     chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages.length]);
 
-  // Receive real-time group messages via WebSocket
+  // Receive real-time notifications via WebSocket (re-fetch members/group on membership change)
   useEffect(() => {
     if (!lastMessage) return;
-    if (lastMessage.type === "group_message" && lastMessage.group_id === gid) {
-      setChatMessages(prev => [...prev, lastMessage]);
-    }
     // Re-fetch group when membership changes (join accepted/declined)
     if (lastMessage.type === "notification") {
       api.getGroup(gid).then(g => setGroup(g)).catch(() => {});
       api.listGroupMembers(gid).then(m => setMembers(m || [])).catch(() => {});
     }
+    // group_message is handled by polling — no append here to avoid duplicates
   }, [lastMessage]);
 
   async function sendChatMessage(e: React.FormEvent) {
