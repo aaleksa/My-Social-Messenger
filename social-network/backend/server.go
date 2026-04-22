@@ -64,6 +64,17 @@ func main() {
 	mux.HandleFunc("/api/auth/register", authHandler.Register)
 	mux.HandleFunc("/api/auth/login", authHandler.Login)
 	mux.HandleFunc("/api/auth/logout", authHandler.Logout)
+	// Returns the caller's session token — used by web frontend to authenticate WebSocket
+	mux.Handle("/api/auth/ws-token", authMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		sessionID := r.Header.Get("X-Session-ID")
+		if sessionID == "" {
+			if cookie, err := r.Cookie("session_id"); err == nil {
+				sessionID = cookie.Value
+			}
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"session_id": sessionID})
+	})))
 
 	// Protected routes
 	protected := func(h http.HandlerFunc) http.Handler {

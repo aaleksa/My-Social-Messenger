@@ -14,7 +14,8 @@ export default function LoginPage() {
     e.preventDefault();
     setError("");
     try {
-      await api.login({ email, password });
+      const data = await api.login({ email, password });
+      if (data?.session_id) localStorage.setItem("session_id", data.session_id);
       router.push("/feed");
     } catch (err: any) {
       setError(err.message);

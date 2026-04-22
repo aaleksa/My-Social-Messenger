@@ -43,12 +43,34 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
   const reconnectRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mountedRef = useRef(true);
 
-  const connect = useCallback(() => {
+  const connect = useCallback(async () => {
     if (!mountedRef.current) return;
-    // Detect ws protocol
+
+    // Get session_id — try localStorage first, then fetch from server
+    let sessionId = localStorage.getItem("session_id");
+    if (!sessionId) {
+      try {
+        const res = await fetch("/api/auth/ws-token", { credentials: "include" });
+        if (res.ok) {
+          const data = await res.json();
+          sessionId = data.session_id;
+          if (sessionId) localStorage.setItem("session_id", sessionId);
+        }
+      } catch {}
+    }
+
+    if (!sessionId) {
+      // Not authenticated — retry after 4s
+      reconnectRef.current = setTimeout(() => {
+        if (mountedRef.current) connect();
+      }, 4000);
+      return;
+    }
+
+    // Connect directly to backend WebSocket (Next.js rewrites don't proxy WS)
     const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const host = window.location.host;
-    const url = `${proto}//${host}/api/ws`;
+    const hostname = window.location.hostname;
+    const url = `${proto}//${hostname}:8080/api/ws?session_id=${encodeURIComponent(sessionId)}`;
 
     const ws = new WebSocket(url);
     wsRef.current = ws;

@@ -28,7 +28,8 @@ export default function RegisterPage() {
     e.preventDefault();
     setError("");
     try {
-      await api.register(form);
+      const data = await api.register(form);
+      if (data?.session_id) localStorage.setItem("session_id", data.session_id);
       router.push("/feed");
     } catch (err: any) {
       setError(err.message);

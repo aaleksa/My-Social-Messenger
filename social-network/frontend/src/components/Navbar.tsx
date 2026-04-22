@@ -55,6 +55,7 @@ export default function Navbar() {
 
   async function handleLogout() {
     try { await api.logout(); } catch {}
+    localStorage.removeItem("session_id");
     router.push("/login");
   }
 
