@@ -63,6 +63,7 @@ function ChatPageInner() {
             name: `${user.first_name} ${user.last_name}`.trim() || `User #${user.id}`,
           }));
         const groupContacts: Contact[] = (Array.isArray(groups) ? groups : [])
+          .filter((g: any) => g.my_status === "accepted")
           .map((g: any) => ({ id: g.id, type: "group" as const, name: g.title || `Group #${g.id}` }));
         setContacts([...userContacts, ...groupContacts]);
         // auto-select contact from URL param
