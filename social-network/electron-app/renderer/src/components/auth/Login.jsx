@@ -5,7 +5,7 @@ import { connectWS } from '../../lib/ws'
 
 export default function Login() {
   const store = useStore
-  const { setMe, setTok } = useStore()
+  const { setMe, setTok, setUsers } = useStore()
   const [tab, setTab] = useState('login') // 'login' | 'register'
 
   // Login state
@@ -32,6 +32,8 @@ export default function Login() {
         const user = await apiFetch(tok, '/api/me')
         setMe(user)
         connectWS(store)
+        // Load users list so Chat sidebar has contacts immediately
+        apiFetch(tok, '/api/users').then(list => { if (Array.isArray(list)) setUsers(list) }).catch(() => {})
       } catch (ex) {
         setErr('Logged in but failed to load profile: ' + ex.message)
       }

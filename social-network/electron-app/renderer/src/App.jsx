@@ -17,7 +17,7 @@ const PAGES = { feed: Feed, profile: Profile, userprofile: UserProfile, people: 
 
 export default function App() {
   const store = useStore
-  const { me, tok, setMe, setTok, page } = useStore()
+  const { me, tok, setMe, setTok, setUsers, page } = useStore()
 
   // Restore session on mount
   useEffect(() => {
@@ -33,6 +33,8 @@ export default function App() {
         if (u?.id) {
           setMe(u)
           connectWS(store)
+          // Load users list so Chat sidebar has contacts
+          apiFetch(savedTok, '/api/users').then(list => { if (Array.isArray(list)) setUsers(list) }).catch(() => {})
         }
       } catch (_) {}
     }
