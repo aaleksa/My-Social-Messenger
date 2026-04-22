@@ -14,7 +14,7 @@ export default function Groups() {
 
   useEffect(() => {
     apiFetch(tok, '/api/groups')
-      .then(d => setGroups(d || []))
+      .then(d => setGroups((d || []).filter(g => g.my_status === 'accepted')))
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [tok])

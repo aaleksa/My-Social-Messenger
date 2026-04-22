@@ -22,7 +22,7 @@ export default function GroupsPage() {
   }, []);
 
   async function load() {
-    try { setGroups((await api.listGroups()) || []); } catch {}
+    try { setGroups(((await api.listGroups()) || []).filter((g: Group) => g.my_status === 'accepted')); } catch {}
   }
 
   async function handleCreate(e: React.FormEvent) {
