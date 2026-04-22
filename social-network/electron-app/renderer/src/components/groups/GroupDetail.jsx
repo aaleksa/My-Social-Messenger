@@ -118,6 +118,17 @@ export default function GroupDetail({ group, onBack }) {
     )
   )
 
+  async function respondMember(userId, accept) {
+    try {
+      await apiFetch(tok, '/api/groups/respond', {
+        method: 'POST',
+        body: JSON.stringify({ group_id: group.id, user_id: userId, accept }),
+      })
+      // refresh members
+      apiFetch(tok, `/api/groups/members?group_id=${group.id}`).then(d => setMembers(d || [])).catch(() => {})
+    } catch (_) {}
+  }
+
   async function sendGroupMsg(e) {
     e.preventDefault()
     if (!chatInput.trim()) return
@@ -143,7 +154,7 @@ export default function GroupDetail({ group, onBack }) {
           <div style={{ fontSize: 20, fontWeight: 800 }}>{group.title}</div>
           {group.description && <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 3 }}>{group.description}</div>}
           <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 4 }}>
-            {members.length} members
+            {members.filter(m => m.status === 'accepted').length} members
             {(() => {
               const creator = users.find(u => u.id === group.creator_id)
               if (creator) return <span> · Created by <strong>{dname(creator)}</strong></span>
@@ -189,6 +200,20 @@ export default function GroupDetail({ group, onBack }) {
 
       {tab === 'members' && (
         <div>
+          {/* Pending requests — visible only to group creator */}
+          {group.creator_id === me?.id && members.filter(m => m.status === 'pending').length > 0 && (
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-dim)', marginBottom: 8 }}>Join Requests</div>
+              {members.filter(m => m.status === 'pending').map(m => (
+                <div key={m.user_id} className="card" style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                  <Avatar user={m} size={38} />
+                  <div style={{ flex: 1 }}>{dname(m)}</div>
+                  <button className="btn btn-primary btn-sm" onClick={() => respondMember(m.user_id, true)}>Accept</button>
+                  <button className="btn btn-secondary btn-sm" onClick={() => respondMember(m.user_id, false)}>Decline</button>
+                </div>
+              ))}
+            </div>
+          )}
           {isMember && (
             <div style={{ marginBottom: 12 }}>
               <button className="btn btn-primary btn-sm" onClick={() => { setShowInvite(true); setInviteSearch(''); setInviting({}) }}>
@@ -196,8 +221,8 @@ export default function GroupDetail({ group, onBack }) {
               </button>
             </div>
           )}
-          {members.length === 0 && <div className="empty"><div className="ei">👥</div>No members yet</div>}
-          {members.map(m => (
+          {members.filter(m => m.status === 'accepted').length === 0 && <div className="empty"><div className="ei">👥</div>No members yet</div>}
+          {members.filter(m => m.status === 'accepted').map(m => (
             <div key={m.user_id} className="card" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <Avatar user={m} size={38} />
               <div style={{ flex: 1 }}>{dname(m)}</div>

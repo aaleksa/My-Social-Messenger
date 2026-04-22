@@ -128,6 +128,12 @@ export default function Notifications() {
                 <button className="btn btn-secondary btn-sm" onClick={e => { e.stopPropagation(); respondGroup(n, 'decline') }}>Decline</button>
               </div>
             )}
+            {(n.type === 'group_join_request') && !n.is_read && (
+              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                <button className="btn btn-primary btn-sm" onClick={e => { e.stopPropagation(); respondGroup(n, 'accept') }}>Accept</button>
+                <button className="btn btn-secondary btn-sm" onClick={e => { e.stopPropagation(); respondGroup(n, 'decline') }}>Decline</button>
+              </div>
+            )}
           </div>
         </div>
       ))}
