@@ -223,6 +223,7 @@ func (h *GroupHandler) RequestJoin(w http.ResponseWriter, r *http.Request) {
 		`INSERT INTO notifications (user_id, actor_id, type, reference_id) VALUES (?, ?, 'group_join_request', ?)`,
 		creatorID, userID, req.GroupID,
 	)
+	h.pushNotif(creatorID)
 
 	w.WriteHeader(http.StatusOK)
 }

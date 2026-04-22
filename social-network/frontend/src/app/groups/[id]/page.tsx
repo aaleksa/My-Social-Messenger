@@ -56,6 +56,15 @@ export default function GroupPage() {
   const isOwner = me?.id === group?.creator_id;
   const isMember = isOwner || group?.my_status === "accepted";
 
+  // Poll every 5s while request is pending so the page updates as soon as creator accepts
+  useEffect(() => {
+    if (group?.my_status !== "pending") return;
+    const interval = setInterval(() => {
+      api.getGroup(gid).then(g => { if (g) setGroup(g); }).catch(() => {});
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [group?.my_status, gid]);
+
   // Load group chat when tab is selected
   useEffect(() => {
     if (tab !== "chat" || !gid) return;
