@@ -1,11 +1,15 @@
-import { WS_URL, dname } from './api.js'
+import { WS_URL, API, dname, apiFetch } from './api.js'
 
 export function connectWS(store) {
   const tok = store.getState().tok
   const url = `${WS_URL}?client=electron${tok ? '&session_id=' + encodeURIComponent(tok) : ''}`
   const ws  = new WebSocket(url)
 
-  ws.onopen  = () => store.getState().setWsOn(true)
+  ws.onopen  = () => {
+    store.getState().setWsOn(true)
+    // Fetch current online users immediately so we don't miss already-connected users
+    fetchOnlineUsers(store)
+  }
   ws.onclose = () => {
     store.getState().setWsOn(false)
     if (store.getState().me) setTimeout(() => connectWS(store), 5000)
@@ -63,4 +67,14 @@ function handleMsg(msg, store) {
     default:
       break
   }
+}
+
+async function fetchOnlineUsers(store) {
+  try {
+    const tok = store.getState().tok
+    const list = await apiFetch(tok, '/api/online-users')
+    if (Array.isArray(list)) {
+      store.getState().setOnlineIDs(list.map(u => u.id))
+    }
+  } catch (_) {}
 }

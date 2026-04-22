@@ -99,10 +99,6 @@ func (h *Hub) followerIDs(userID int64) []int64 {
 }
 
 func (h *Hub) broadcastPresence(userID int64, online bool) {
-	followers := h.followerIDs(userID)
-	if len(followers) == 0 {
-		return
-	}
 	msgType := "presence_offline"
 	if online {
 		msgType = "presence_online"
@@ -116,7 +112,19 @@ func (h *Hub) broadcastPresence(userID int64, online bool) {
 		h.mu.RUnlock()
 	}
 	msg := WSMessage{Type: msgType, SenderID: userID, ClientType: clientType, CreatedAt: time.Now()}
-	h.BroadcastToUsers(followers, msg)
+	// Broadcast to ALL connected clients except the user themselves
+	h.mu.RLock()
+	for uid, client := range h.clients {
+		if uid == userID {
+			continue
+		}
+		data, _ := json.Marshal(msg)
+		select {
+		case client.send <- data:
+		default:
+		}
+	}
+	h.mu.RUnlock()
 }
 
 func (h *Hub) Run() {
