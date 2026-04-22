@@ -12,11 +12,12 @@ const NAV = [
 export default function Sidebar() {
   const { page, setPage, unreadDM, unreadGroup, notifCnt, resetNotif } = useStore()
 
-  const totalChat = Object.values(unreadDM).reduce((s, v) => s + v, 0)
-    + Object.values(unreadGroup).reduce((s, v) => s + v, 0)
+  const totalDM = Object.values(unreadDM).reduce((s, v) => s + v, 0)
+  const totalGroup = Object.values(unreadGroup).reduce((s, v) => s + v, 0)
 
   const badges = {
-    chat: totalChat,
+    chat: totalDM,
+    groups: totalGroup,
     notifications: notifCnt,
   }
 
