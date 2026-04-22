@@ -223,7 +223,10 @@ export default function GroupPage() {
                   <span style={{ background: "#e7f3ff", color: "var(--accent)", borderRadius: "var(--radius)", padding: "0.3rem 0.75rem", fontSize: 13, fontWeight: 600 }}>Member</span>
                 )}
                 {!isOwner && group.my_status === "pending" && (
-                  <span style={{ background: "var(--bg-input)", color: "var(--text-muted)", borderRadius: "var(--radius)", padding: "0.3rem 0.75rem", fontSize: 13 }}>Request pending</span>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.3rem" }}>
+                    <span style={{ background: "var(--bg-input)", color: "var(--text-muted)", borderRadius: "var(--radius)", padding: "0.3rem 0.75rem", fontSize: 13 }}>Request pending</span>
+                    <button onClick={reloadGroup} style={{ background: "transparent", border: "none", color: "var(--accent)", fontSize: 12, cursor: "pointer", padding: 0 }}>↻ Check status</button>
+                  </div>
                 )}
                 {!isOwner && group.my_status === "invited" && (
                   <div style={{ display: "flex", gap: "0.4rem" }}>
@@ -242,9 +245,7 @@ export default function GroupPage() {
                 )}
               </div>
             </div>
-            <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: "0.5rem" }}>
-              {group.member_count} member{group.member_count !== 1 ? "s" : ""} &middot; Created {new Date(group.created_at).toLocaleDateString()}
-            </p>
+
           </div>
         </div>
 
