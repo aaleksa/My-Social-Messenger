@@ -38,7 +38,7 @@ type Client struct {
 }
 
 type Hub struct {
-	clients    map[int64]*Client
+	clients    map[int64][]*Client
 	broadcast  chan WSMessage
 	register   chan *Client
 	unregister chan *Client
@@ -48,7 +48,7 @@ type Hub struct {
 
 func NewHub(db *sql.DB) *Hub {
 	return &Hub{
-		clients:    make(map[int64]*Client),
+		clients:    make(map[int64][]*Client),
 		broadcast:  make(chan WSMessage, 256),
 		register:   make(chan *Client),
 		unregister: make(chan *Client),
@@ -61,8 +61,10 @@ func (h *Hub) OnlineUserIDs() map[int64]bool {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	out := make(map[int64]bool, len(h.clients))
-	for uid := range h.clients {
-		out[uid] = true
+	for uid, cs := range h.clients {
+		if len(cs) > 0 {
+			out[uid] = true
+		}
 	}
 	return out
 }
@@ -72,8 +74,10 @@ func (h *Hub) OnlineUserDetails() map[int64]string {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	out := make(map[int64]string, len(h.clients))
-	for uid, c := range h.clients {
-		out[uid] = c.clientType
+	for uid, cs := range h.clients {
+		if len(cs) > 0 {
+			out[uid] = cs[0].clientType
+		}
 	}
 	return out
 }
@@ -106,22 +110,24 @@ func (h *Hub) broadcastPresence(userID int64, online bool) {
 	clientType := ""
 	if online {
 		h.mu.RLock()
-		if c, ok := h.clients[userID]; ok {
-			clientType = c.clientType
+		if cs, ok := h.clients[userID]; ok && len(cs) > 0 {
+			clientType = cs[0].clientType
 		}
 		h.mu.RUnlock()
 	}
 	msg := WSMessage{Type: msgType, SenderID: userID, ClientType: clientType, CreatedAt: time.Now()}
 	// Broadcast to ALL connected clients except the user themselves
 	h.mu.RLock()
-	for uid, client := range h.clients {
+	for uid, clients := range h.clients {
 		if uid == userID {
 			continue
 		}
-		data, _ := json.Marshal(msg)
-		select {
-		case client.send <- data:
-		default:
+		for _, client := range clients {
+			data, _ := json.Marshal(msg)
+			select {
+			case client.send <- data:
+			default:
+			}
 		}
 	}
 	h.mu.RUnlock()
@@ -132,14 +138,21 @@ func (h *Hub) Run() {
 		select {
 		case client := <-h.register:
 			h.mu.Lock()
-			h.clients[client.userID] = client
+			h.clients[client.userID] = append(h.clients[client.userID], client)
 			h.mu.Unlock()
 			go h.broadcastPresence(client.userID, true)
 		case client := <-h.unregister:
 			h.mu.Lock()
-			if _, ok := h.clients[client.userID]; ok {
+			cs := h.clients[client.userID]
+			for i, c := range cs {
+				if c == client {
+					close(c.send)
+					h.clients[client.userID] = append(cs[:i], cs[i+1:]...)
+					break
+				}
+			}
+			if len(h.clients[client.userID]) == 0 {
 				delete(h.clients, client.userID)
-				close(client.send)
 			}
 			h.mu.Unlock()
 			go h.broadcastPresence(client.userID, false)
@@ -147,12 +160,10 @@ func (h *Hub) Run() {
 			data, _ := json.Marshal(msg)
 			h.mu.RLock()
 			if msg.RecipientID != 0 {
-				if client, ok := h.clients[msg.RecipientID]; ok {
+				for _, c := range h.clients[msg.RecipientID] {
 					select {
-					case client.send <- data:
+					case c.send <- data:
 					default:
-						close(client.send)
-						delete(h.clients, client.userID)
 					}
 				}
 			}
@@ -163,12 +174,11 @@ func (h *Hub) Run() {
 
 func (h *Hub) SendToUser(userID int64, msg WSMessage) {
 	h.mu.RLock()
-	client, ok := h.clients[userID]
-	h.mu.RUnlock()
-	if ok {
-		data, _ := json.Marshal(msg)
+	defer h.mu.RUnlock()
+	data, _ := json.Marshal(msg)
+	for _, c := range h.clients[userID] {
 		select {
-		case client.send <- data:
+		case c.send <- data:
 		default:
 		}
 	}
@@ -179,9 +189,9 @@ func (h *Hub) BroadcastToUsers(userIDs []int64, msg WSMessage) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	for _, uid := range userIDs {
-		if client, ok := h.clients[uid]; ok {
+		for _, c := range h.clients[uid] {
 			select {
-			case client.send <- data:
+			case c.send <- data:
 			default:
 			}
 		}

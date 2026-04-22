@@ -37,12 +37,17 @@ export default function GroupDetail({ group, onBack }) {
       setEvents(evts)
       setResponses(Object.fromEntries(evts.map(e => [e.id, e.user_response || ''])))
     }).catch(() => {})
-    // Load group chat messages
-    if (!cachedMsgs[chatKey]) {
+    // Load group chat messages initially
+    apiFetch(tok, `/api/messages/group?group_id=${group.id}`)
+      .then(d => setCachedMsgs(chatKey, d || []))
+      .catch(() => {})
+    // Poll chat every 4s for new messages
+    const pollChat = setInterval(() => {
       apiFetch(tok, `/api/messages/group?group_id=${group.id}`)
-        .then(d => setCachedMsgs(chatKey, d || []))
+        .then(d => { if (d) setCachedMsgs(chatKey, d) })
         .catch(() => {})
-    }
+    }, 4000)
+    return () => clearInterval(pollChat)
   }, [group.id])
 
   // Re-fetch membership status when a notification arrives (e.g. group_join_accepted)

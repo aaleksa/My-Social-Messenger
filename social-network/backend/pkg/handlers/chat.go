@@ -131,11 +131,11 @@ func (h *ChatHandler) SendGroupMessage(w http.ResponseWriter, r *http.Request) {
 	}
 	id, _ := result.LastInsertId()
 
-	// Broadcast to all group members via WebSocket
+	// Broadcast to all group members via WebSocket (including sender for multi-device support)
 	if h.Hub != nil {
 		memberRows, _ := h.DB.Query(
-			`SELECT user_id FROM group_members WHERE group_id = ? AND status = 'accepted' AND user_id != ?`,
-			req.GroupID, senderID,
+			`SELECT user_id FROM group_members WHERE group_id = ? AND status = 'accepted'`,
+			req.GroupID,
 		)
 		var memberIDs []int64
 		for memberRows.Next() {
