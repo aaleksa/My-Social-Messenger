@@ -41,6 +41,8 @@ export default function Notifications() {
       .finally(() => setLoading(false))
   }, [tok])
 
+  const [responded, setResponded] = useState({}) // track locally which requests were responded
+
   async function markRead(id) {
     try {
       await apiFetch(tok, '/api/notifications', { method: 'PUT', body: JSON.stringify({ id }) })
@@ -63,6 +65,7 @@ export default function Notifications() {
       })
       await apiFetch(tok, '/api/notifications', { method: 'PUT', body: JSON.stringify({ id: notif.id }) })
       setNotifs(prev => prev.map(n => n.id === notif.id ? { ...n, is_read: true } : n))
+      setResponded(p => ({ ...p, [notif.id]: action }))
     } catch (_) {}
   }
 
@@ -92,7 +95,10 @@ export default function Notifications() {
         <div className="empty"><div className="ei">🔔</div>No notifications</div>
       )}
       {notifs.map(n => (
-        <div key={n.id} className={`notif-item ${!n.is_read ? 'unread' : ''}`} onClick={() => !n.is_read && markRead(n.id)}>
+        <div key={n.id} className={`notif-item ${!n.is_read ? 'unread' : ''}`} onClick={() => {
+          // Don't mark as read on click for follow_request — wait for Accept/Decline
+          if (n.type !== 'follow_request' && !n.is_read) markRead(n.id)
+        }}>
           <div className="notif-icon-big" style={{ position: 'relative', flexShrink: 0 }}>
             {n.actor_avatar
               ? <img src={`${API}/uploads/${n.actor_avatar}`} alt="" style={{ width: 42, height: 42, borderRadius: '50%', objectFit: 'cover' }} />
@@ -105,10 +111,15 @@ export default function Notifications() {
           <div style={{ flex: 1, minWidth: 0 }}>
             <div className="notif-text" style={{ fontWeight: !n.is_read ? 600 : 400 }}>{notifText(n)}</div>
             <div className="notif-time">{fmtD(n.created_at)}</div>
-            {(n.type === 'follow_request') && !n.is_read && (
+            {(n.type === 'follow_request') && !responded[n.id] && (
               <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
                 <button className="btn btn-primary btn-sm" onClick={e => { e.stopPropagation(); respond(n, 'accept') }}>Accept</button>
                 <button className="btn btn-secondary btn-sm" onClick={e => { e.stopPropagation(); respond(n, 'decline') }}>Decline</button>
+              </div>
+            )}
+            {(n.type === 'follow_request') && responded[n.id] && (
+              <div style={{ fontSize: 12, marginTop: 6, color: 'var(--text-dim)' }}>
+                {responded[n.id] === 'accept' ? '✅ Accepted' : '❌ Declined'}
               </div>
             )}
             {(n.type === 'group_invite') && !n.is_read && (
