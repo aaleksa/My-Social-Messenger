@@ -68,7 +68,7 @@ export default function GroupPage() {
   // Load group chat when tab is selected
   useEffect(() => {
     if (tab !== "chat" || !gid) return;
-    api.getGroupMessages(gid).then(m => setChatMessages(Array.isArray(m) ? [...m].reverse() : [])).catch(() => {});
+    api.getGroupMessages(gid).then(m => setChatMessages(Array.isArray(m) ? m : [])).catch(() => {});
   }, [tab, gid]);
 
   // Scroll to bottom when chat messages update

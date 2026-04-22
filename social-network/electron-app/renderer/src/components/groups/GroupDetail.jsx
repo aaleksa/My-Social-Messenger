@@ -40,7 +40,7 @@ export default function GroupDetail({ group, onBack }) {
     // Load group chat messages
     if (!cachedMsgs[chatKey]) {
       apiFetch(tok, `/api/messages/group?group_id=${group.id}`)
-        .then(d => setCachedMsgs(chatKey, (d || []).reverse()))
+        .then(d => setCachedMsgs(chatKey, d || []))
         .catch(() => {})
     }
   }, [group.id])
