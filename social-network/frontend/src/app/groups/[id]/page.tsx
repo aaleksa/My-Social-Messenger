@@ -73,6 +73,11 @@ export default function GroupPage() {
     if (lastMessage.type === "group_message" && lastMessage.group_id === gid) {
       setChatMessages(prev => [...prev, lastMessage]);
     }
+    // Re-fetch group when membership changes (join accepted/declined)
+    if (lastMessage.type === "notification") {
+      api.getGroup(gid).then(g => setGroup(g)).catch(() => {});
+      api.listGroupMembers(gid).then(m => setMembers(m || [])).catch(() => {});
+    }
   }, [lastMessage]);
 
   async function sendChatMessage(e: React.FormEvent) {
@@ -198,6 +203,17 @@ export default function GroupPage() {
               <div>
                 <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: "0.25rem" }}>{group.title}</h2>
                 {group.description && <p style={{ color: "var(--text-muted)", fontSize: 14 }}>{group.description}</p>}
+                <p style={{ color: "var(--text-muted)", fontSize: 13, marginTop: "0.25rem" }}>
+                  {group.member_count} member{group.member_count !== 1 ? "s" : ""} &middot; Created by{" "}
+                  <strong>
+                    {isOwner
+                      ? "you"
+                      : (() => {
+                          const c = allUsers.find(u => u.id === group.creator_id);
+                          return c ? `${c.first_name} ${c.last_name}`.trim() : `User #${group.creator_id}`;
+                        })()}
+                  </strong>
+                </p>
               </div>
               <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.4rem", flexShrink: 0 }}>
                 {isOwner && (

@@ -6,12 +6,12 @@ import Modal from '../ui/Modal'
 import PostCreate from '../feed/PostCreate'
 
 export default function GroupDetail({ group, onBack }) {
-  const { tok, me, users, cachedMsgs, setCachedMsgs, pushMsg } = useStore()
+  const { tok, me, users, cachedMsgs, setCachedMsgs, pushMsg, notifCnt } = useStore()
   const [tab, setTab] = useState('posts')
   const [posts, setPosts] = useState([])
   const [members, setMembers] = useState([])
   const [events, setEvents] = useState([])
-  const [isMember, setIsMember] = useState(false)
+  const [myStatus, setMyStatus] = useState(group.my_status || '')
   const [responses, setResponses] = useState({})
   const [showEvent, setShowEvent] = useState(false)
   const [ev, setEv] = useState({ title: '', description: '', event_time: '' })
@@ -28,7 +28,9 @@ export default function GroupDetail({ group, onBack }) {
     apiFetch(tok, `/api/groups/members?group_id=${group.id}`).then(d => {
       const ms = d || []
       setMembers(ms)
-      setIsMember(ms.some(m => m.id === me?.id))
+    }).catch(() => {})
+    apiFetch(tok, `/api/groups/detail?id=${group.id}`).then(d => {
+      if (d?.my_status !== undefined) setMyStatus(d.my_status)
     }).catch(() => {})
     apiFetch(tok, `/api/groups/events?group_id=${group.id}`).then(d => {
       const evts = d || []
@@ -43,20 +45,28 @@ export default function GroupDetail({ group, onBack }) {
     }
   }, [group.id])
 
+  // Re-fetch membership status when a notification arrives (e.g. group_join_accepted)
+  useEffect(() => {
+    if (!notifCnt) return
+    apiFetch(tok, `/api/groups/detail?id=${group.id}`).then(d => {
+      if (d?.my_status !== undefined) setMyStatus(d.my_status)
+    }).catch(() => {})
+    apiFetch(tok, `/api/groups/members?group_id=${group.id}`).then(d => setMembers(d || [])).catch(() => {})
+  }, [notifCnt])
+
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [chatMsgs.length])
 
   async function joinOrLeave() {
     try {
-      if (isMember) {
-        // leave = delete own membership via respond with accept:false as creator, or just local state
+      if (myStatus === 'accepted') {
         await apiFetch(tok, '/api/groups/respond', { method: 'POST', body: JSON.stringify({ group_id: group.id, user_id: me.id, accept: false }) })
-        setIsMember(false)
-        setMembers(m => m.filter(u => u.id !== me.id))
-      } else {
+        setMyStatus('')
+        setMembers(m => m.filter(u => u.user_id !== me.id))
+      } else if (myStatus === '' || myStatus === null) {
         await apiFetch(tok, '/api/groups/join', { method: 'POST', body: JSON.stringify({ group_id: group.id }) })
-        setIsMember(true)
+        setMyStatus('pending')
       }
     } catch (_) {}
   }
@@ -97,7 +107,8 @@ export default function GroupDetail({ group, onBack }) {
     }
   }
 
-  const memberIds = new Set(members.map(m => m.id))
+  const isMember = group.creator_id === me?.id || myStatus === 'accepted'
+  const memberIds = new Set(members.map(m => m.user_id))
   const invitablePeople = users.filter(u =>
     u.id !== me?.id &&
     !memberIds.has(u.id) &&
@@ -130,13 +141,23 @@ export default function GroupDetail({ group, onBack }) {
         <div className="g-big-icon">👥</div>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 20, fontWeight: 800 }}>{group.title}</div>
-          <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 3 }}>{group.description}</div>
-          <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 4 }}>{members.length} members</div>
+          {group.description && <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 3 }}>{group.description}</div>}
+          <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 4 }}>
+            {members.length} members
+            {(() => {
+              const creator = users.find(u => u.id === group.creator_id)
+              if (creator) return <span> · Created by <strong>{dname(creator)}</strong></span>
+              if (group.creator_id === me?.id) return <span> · Created by <strong>you</strong></span>
+              return null
+            })()}
+          </div>
         </div>
         {group.creator_id !== me?.id && (
-          <button className={`btn ${isMember ? 'btn-secondary' : 'btn-primary'} btn-sm`} onClick={joinOrLeave}>
-            {isMember ? 'Leave Group' : 'Join Group'}
-          </button>
+          myStatus === 'pending'
+            ? <button className="btn btn-secondary btn-sm" disabled>Request pending</button>
+            : <button className={`btn ${myStatus === 'accepted' ? 'btn-secondary' : 'btn-primary'} btn-sm`} onClick={joinOrLeave}>
+                {myStatus === 'accepted' ? 'Leave Group' : 'Join Group'}
+              </button>
         )}
         {isMember && (
           <button className="btn btn-secondary btn-sm" onClick={() => setShowEvent(true)}>
@@ -177,10 +198,10 @@ export default function GroupDetail({ group, onBack }) {
           )}
           {members.length === 0 && <div className="empty"><div className="ei">👥</div>No members yet</div>}
           {members.map(m => (
-            <div key={m.id} className="card" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div key={m.user_id} className="card" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <Avatar user={m} size={38} />
               <div style={{ flex: 1 }}>{dname(m)}</div>
-              {m.id === group.creator_id && <span className="tag owner" style={{ background: 'var(--accent)', color: '#fff', borderRadius: 6, padding: '2px 8px', fontSize: 11, fontWeight: 700 }}>Owner</span>}
+              {m.user_id === group.creator_id && <span className="tag owner" style={{ background: 'var(--accent)', color: '#fff', borderRadius: 6, padding: '2px 8px', fontSize: 11, fontWeight: 700 }}>Owner</span>}
             </div>
           ))}
 
@@ -258,7 +279,7 @@ export default function GroupDetail({ group, onBack }) {
             {chatMsgs.length === 0 && <div className="empty"><div className="ei">💬</div>No messages yet</div>}
             {chatMsgs.map((m, i) => {
               const isMine = m.sender_id === me?.id
-              const sender = members.find(u => u.id === m.sender_id)
+              const sender = members.find(u => u.user_id === m.sender_id)
               return (
                 <div key={m.id || i} style={{ display: 'flex', flexDirection: isMine ? 'row-reverse' : 'row', alignItems: 'flex-end', gap: 8 }}>
                   {!isMine && <Avatar user={sender} size={28} />}
