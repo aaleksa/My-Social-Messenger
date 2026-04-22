@@ -14,6 +14,7 @@ type Message = {
   created_at: string;
 };
 type Contact = { id: number; type: "user" | "group"; name: string };
+type GroupMember = { user_id: number; first_name: string; last_name: string; avatar: string };
 
 const EMOJIS = [
   "\uD83D\uDE00","\uD83D\uDE02","\uD83D\uDE04","\uD83D\uDE06","\uD83D\uDE09","\uD83D\uDE0D","\uD83D\uDE18","\uD83D\uDE1C",
@@ -37,6 +38,7 @@ function ChatPageInner() {
   const searchParams = useSearchParams();
   const preselectedUserId = searchParams ? Number(searchParams.get("userId")) : 0;
   const [messages, setMessages] = useState<Message[]>([]);
+  const [groupMembers, setGroupMembers] = useState<Record<number, GroupMember>>({});
   const [text, setText] = useState("");
   const [showEmoji, setShowEmoji] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -88,6 +90,16 @@ function ChatPageInner() {
   useEffect(() => {
     if (pollRef.current) clearInterval(pollRef.current);
     if (!selected) return;
+    // Fetch group members for sender name display
+    if (selected.type === "group") {
+      api.listGroupMembers(selected.id).then((members: GroupMember[]) => {
+        const map: Record<number, GroupMember> = {};
+        (members || []).forEach((m: GroupMember) => { map[m.user_id] = m; });
+        setGroupMembers(map);
+      }).catch(() => {});
+    } else {
+      setGroupMembers({});
+    }
     const load = () => {
       if (selected.type === "user") {
         api.getMessages(selected.id).then(m => setMessages(Array.isArray(m) ? m : [])).catch(() => {});
@@ -96,8 +108,8 @@ function ChatPageInner() {
       }
     };
     load();
-    // Fallback poll every 10s
-    pollRef.current = setInterval(load, 10000);
+    // Poll every 3s for real-time feel
+    pollRef.current = setInterval(load, 3000);
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, [selected]);
 
@@ -248,18 +260,32 @@ function ChatPageInner() {
               )}
               {messages.map((m, i) => {
                 const isMine = me && m.sender_id === me.id;
+                const isGroup = selected?.type === "group";
+                const sender = isGroup && !isMine ? groupMembers[m.sender_id] : null;
                 return (
-                  <div key={m.id ?? i} style={{ display: "flex", justifyContent: isMine ? "flex-end" : "flex-start" }}>
-                    <div style={{
-                      maxWidth: "65%", padding: "0.55rem 0.9rem",
-                      borderRadius: isMine ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
-                      background: isMine ? "var(--accent)" : "var(--bg-input)",
-                      color: isMine ? "#fff" : "var(--text)",
-                      fontSize: 14, lineHeight: 1.45, wordBreak: "break-word",
-                    }}>
-                      {m.content}
-                      <div style={{ fontSize: 10, opacity: .65, marginTop: "0.2rem", textAlign: "right" }}>
-                        {new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  <div key={m.id ?? i} style={{ display: "flex", flexDirection: isMine ? "row-reverse" : "row", alignItems: "flex-end", gap: 8 }}>
+                    {isGroup && !isMine && (
+                      <div style={{ width: 30, height: 30, borderRadius: "50%", background: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 700, fontSize: 13, flexShrink: 0 }}>
+                        {sender ? (sender.first_name[0] || "?").toUpperCase() : "?"}
+                      </div>
+                    )}
+                    <div style={{ maxWidth: "65%" }}>
+                      {isGroup && !isMine && sender && (
+                        <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 2, color: "var(--text-muted)", paddingLeft: 4 }}>
+                          {sender.first_name} {sender.last_name}
+                        </div>
+                      )}
+                      <div style={{
+                        padding: "0.55rem 0.9rem",
+                        borderRadius: isMine ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
+                        background: isMine ? "var(--accent)" : "var(--bg-input)",
+                        color: isMine ? "#fff" : "var(--text)",
+                        fontSize: 14, lineHeight: 1.45, wordBreak: "break-word",
+                      }}>
+                        {m.content}
+                        <div style={{ fontSize: 10, opacity: .65, marginTop: "0.2rem", textAlign: isMine ? "right" : "left" }}>
+                          {new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                        </div>
                       </div>
                     </div>
                   </div>
