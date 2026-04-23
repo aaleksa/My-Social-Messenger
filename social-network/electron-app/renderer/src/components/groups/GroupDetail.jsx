@@ -87,13 +87,16 @@ export default function GroupDetail({ group, onBack }) {
   async function createEvent(e) {
     e.preventDefault()
     try {
-      const evt = await apiFetch(tok, '/api/groups/events', {
+      await apiFetch(tok, '/api/groups/events', {
         method: 'POST', body: JSON.stringify({ ...ev, group_id: group.id }),
       })
-      setEvents(prev => [evt, ...prev])
       setShowEvent(false)
       setEv({ title: '', description: '', event_time: '' })
-    } catch (_) {}
+      const updated = await apiFetch(tok, `/api/groups/events?group_id=${group.id}`)
+      setEvents(Array.isArray(updated) ? updated : [])
+    } catch (err) {
+      alert('Failed to create event: ' + (err.message || err))
+    }
   }
 
   async function rsvp(eventId, status) {
