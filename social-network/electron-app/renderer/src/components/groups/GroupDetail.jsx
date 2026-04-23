@@ -86,16 +86,28 @@ export default function GroupDetail({ group, onBack }) {
 
   async function createEvent(e) {
     e.preventDefault()
+    if (!tok) { alert('Not logged in (no session token)'); return }
+    if (!ev.title.trim()) { alert('Title is required'); return }
+    if (!ev.event_time) { alert('Date & Time is required'); return }
+    const payload = { title: ev.title.trim(), description: ev.description || '', event_time: ev.event_time, group_id: group.id }
     try {
-      await apiFetch(tok, '/api/groups/events', {
-        method: 'POST', body: JSON.stringify({ ...ev, group_id: group.id }),
+      const res = await fetch('http://localhost:8080/api/groups/events', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', 'X-Session-ID': tok },
+        body: JSON.stringify(payload),
       })
+      if (!res.ok) {
+        const txt = await res.text()
+        alert(`Error ${res.status}: ${txt}`)
+        return
+      }
       setShowEvent(false)
       setEv({ title: '', description: '', event_time: '' })
       const updated = await apiFetch(tok, `/api/groups/events?group_id=${group.id}`)
       setEvents(Array.isArray(updated) ? updated : [])
     } catch (err) {
-      alert('Failed to create event: ' + (err.message || err))
+      alert('Network error: ' + (err.message || err))
     }
   }
 
