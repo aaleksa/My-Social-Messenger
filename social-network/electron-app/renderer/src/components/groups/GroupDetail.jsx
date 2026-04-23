@@ -5,6 +5,13 @@ import Avatar from '../ui/Avatar'
 import Modal from '../ui/Modal'
 import PostCreate from '../feed/PostCreate'
 
+const EMOJIS = [
+  '😀','😂','😍','🥰','😎','🤔','😅','😭','😡','🥳',
+  '👍','👎','👏','🙌','🤝','🫶','❤️','🔥','✅','⭐',
+  '🎉','🎊','💯','😜','🤣','😢','😤','🙄','😴','🤯',
+  '🐶','🐱','🌟','🍕','🎮','💻','📱','🚀','🌈','💀',
+]
+
 export default function GroupDetail({ group, onBack }) {
   const { tok, me, users, cachedMsgs, setCachedMsgs, pushMsg, notifCnt } = useStore()
   const [tab, setTab] = useState('posts')
@@ -19,6 +26,7 @@ export default function GroupDetail({ group, onBack }) {
   const [inviteSearch, setInviteSearch] = useState('')
   const [inviting, setInviting] = useState({})
   const [chatInput, setChatInput] = useState('')
+  const [showEmoji, setShowEmoji] = useState(false)
   const chatKey = `g:${group.id}`
   const chatMsgs = cachedMsgs[chatKey] || []
   const chatEndRef = useRef(null)
@@ -329,12 +337,32 @@ export default function GroupDetail({ group, onBack }) {
             <div ref={chatEndRef} />
           </div>
           {isMember && (
-            <form onSubmit={sendGroupMsg} style={{ display: 'flex', gap: 8, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
+            <form onSubmit={sendGroupMsg} style={{ display: 'flex', gap: 8, paddingTop: 10, borderTop: '1px solid var(--border)', position: 'relative' }}>
+              <button type="button" onClick={e => { e.stopPropagation(); setShowEmoji(v => !v) }}
+                style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', padding: '0 4px', color: 'var(--text-dim)' }}
+              >😊</button>
+              {showEmoji && (
+                <div onClick={e => e.stopPropagation()} style={{
+                  position: 'absolute', bottom: 52, left: 0,
+                  background: 'var(--bg-card)', border: '1px solid var(--border)',
+                  borderRadius: 10, padding: 8,
+                  display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: 4,
+                  zIndex: 20, boxShadow: '0 4px 20px rgba(0,0,0,.3)',
+                }}>
+                  {EMOJIS.map(em => (
+                    <button key={em} type="button"
+                      onClick={() => { setChatInput(v => v + em); setShowEmoji(false) }}
+                      style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', borderRadius: 4, padding: '2px 4px' }}
+                    >{em}</button>
+                  ))}
+                </div>
+              )}
               <input
                 style={{ flex: 1, padding: '8px 14px', background: 'var(--bg-mid)', border: '1px solid var(--border)', borderRadius: 20, color: 'var(--text)', fontSize: 13, outline: 'none' }}
                 placeholder="Type a message…"
                 value={chatInput}
                 onChange={e => setChatInput(e.target.value)}
+                onClick={() => setShowEmoji(false)}
               />
               <button className="btn btn-primary btn-sm" type="submit">Send</button>
             </form>

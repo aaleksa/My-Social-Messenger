@@ -44,7 +44,7 @@ function handleMsg(msg, store) {
     }
     case 'group_message': {
       const gkey = 'g:' + msg.group_id
-      s.pushMsg(gkey, msg)
+      // Don't pushMsg — polling every 4s replaces the array cleanly from API
       if (s.activeChatID !== gkey) {
         s.addUnreadGroup(gkey)
         const preview = (msg.content || '').length > 60 ? msg.content.slice(0, 60) + '…' : (msg.content || '')
