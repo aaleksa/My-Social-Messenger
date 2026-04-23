@@ -345,7 +345,7 @@ export default function GroupDetail({ group, onBack }) {
         <div>
           {events.length === 0 && <div className="empty"><div className="ei">📅</div>No events yet</div>}
           {events.map(ev => {
-            const isPast = ev.event_time && new Date(ev.event_time) < new Date()
+            const isPast = ev.event_time && new Date(ev.event_time.replace(' ', 'T').replace(/(\d{2}:\d{2}:\d{2})$/, '$1Z')) < new Date()
             const canDelete = me?.id === ev.creator_id || me?.id === group.creator_id
             return (
             <div key={ev.id} className="event-card" style={isPast ? { opacity: 0.6 } : {}}>
