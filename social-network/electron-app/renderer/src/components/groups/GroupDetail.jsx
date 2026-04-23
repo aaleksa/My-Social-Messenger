@@ -348,12 +348,12 @@ export default function GroupDetail({ group, onBack }) {
             const isPast = ev.event_time && new Date(ev.event_time.replace(' ', 'T').replace(/(\d{2}:\d{2}:\d{2})$/, '$1Z')) < new Date()
             const canDelete = me?.id === ev.creator_id || me?.id === group.creator_id
             return (
-            <div key={ev.id} className="event-card" style={isPast ? { opacity: 0.6 } : {}}>
+            <div key={ev.id} className="event-card" style={isPast ? { opacity: 0.65, borderLeft: '3px solid #f59e0b' } : { borderLeft: '3px solid var(--accent)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
                 <div style={{ flex: 1 }}>
                   <div className="event-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     {ev.title}
-                    {isPast && <span style={{ fontSize: 10, background: 'var(--bg-mid)', color: 'var(--text-dim)', borderRadius: 4, padding: '1px 5px', fontWeight: 400 }}>Past</span>}
+                    {isPast && <span style={{ fontSize: 10, background: '#f59e0b22', color: '#b45309', border: '1px solid #f59e0b', borderRadius: 4, padding: '1px 6px', fontWeight: 600 }}>⏰ Expired</span>}
                   </div>
                   <div className="event-desc">{ev.description}</div>
                   <div className="event-meta">📅 {fmtD(ev.event_time)}</div>

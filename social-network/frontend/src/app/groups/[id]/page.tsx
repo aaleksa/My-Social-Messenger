@@ -391,12 +391,12 @@ export default function GroupPage() {
                   const isPast = evDate ? evDate < new Date() : false;
                   const canDelete = me?.id === ev.creator_id || isOwner;
                   return (
-                    <div key={ev.id} style={{ background: "var(--bg-card)", border: `1px solid ${isPast ? "var(--border)" : "var(--border)"}`, borderRadius: "var(--radius)", padding: "1rem", marginBottom: "0.75rem", boxShadow: "var(--shadow)", opacity: isPast ? 0.65 : 1 }}>
+                    <div key={ev.id} style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderLeft: isPast ? "3px solid #f59e0b" : "3px solid var(--accent)", borderRadius: "var(--radius)", padding: "1rem", marginBottom: "0.75rem", boxShadow: "var(--shadow)", opacity: isPast ? 0.7 : 1 }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "1rem" }}>
                         <div style={{ flex: 1 }}>
                           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.25rem" }}>
                             <h4 style={{ fontWeight: 600, margin: 0 }}>{ev.title}</h4>
-                            {isPast && <span style={{ fontSize: 11, background: "var(--bg-input)", color: "var(--text-muted)", borderRadius: 4, padding: "1px 6px" }}>Past</span>}
+                            {isPast && <span style={{ fontSize: 11, background: "#f59e0b22", color: "#b45309", border: "1px solid #f59e0b", borderRadius: 4, padding: "1px 6px", fontWeight: 600 }}>⏰ Expired</span>}
                           </div>
                           {ev.description && <p style={{ fontSize: 14, color: "var(--text-muted)", marginBottom: "0.5rem" }}>{ev.description}</p>}
                           <p style={{ fontSize: 13, color: isPast ? "var(--text-muted)" : "var(--accent)", fontWeight: 500, marginBottom: "0.4rem" }}>
