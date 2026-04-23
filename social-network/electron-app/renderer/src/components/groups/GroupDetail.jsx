@@ -111,6 +111,15 @@ export default function GroupDetail({ group, onBack }) {
     }
   }
 
+  async function deleteEvent(eventId) {
+    if (!confirm('Delete this event?')) return
+    try {
+      await apiFetch(tok, `/api/groups/events?id=${eventId}`, { method: 'DELETE' })
+      setEvents(evs => evs.filter(e => e.id !== eventId))
+      showToast('Event deleted')
+    } catch (_) {}
+  }
+
   async function rsvp(eventId, status) {
     const prev = responses[eventId] || ''
     // Toggle off if clicking the already-active button
@@ -226,7 +235,7 @@ export default function GroupDetail({ group, onBack }) {
                 {myStatus === 'accepted' ? 'Leave Group' : 'Join Group'}
               </button>
         )}
-        {isMember && (
+        {isMember && group.creator_id === me?.id && (
           <button className="btn btn-secondary btn-sm" onClick={() => setShowEvent(true)}>
             + Event
           </button>
@@ -335,11 +344,32 @@ export default function GroupDetail({ group, onBack }) {
       {tab === 'events' && (
         <div>
           {events.length === 0 && <div className="empty"><div className="ei">📅</div>No events yet</div>}
-          {events.map(ev => (
-            <div key={ev.id} className="event-card">
-              <div className="event-title">{ev.title}</div>
-              <div className="event-desc">{ev.description}</div>
-              <div className="event-meta">📅 {fmtD(ev.event_time)}</div>
+          {events.map(ev => {
+            const isPast = ev.event_time && new Date(ev.event_time) < new Date()
+            const canDelete = me?.id === ev.creator_id || me?.id === group.creator_id
+            return (
+            <div key={ev.id} className="event-card" style={isPast ? { opacity: 0.6 } : {}}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+                <div style={{ flex: 1 }}>
+                  <div className="event-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {ev.title}
+                    {isPast && <span style={{ fontSize: 10, background: 'var(--bg-mid)', color: 'var(--text-dim)', borderRadius: 4, padding: '1px 5px', fontWeight: 400 }}>Past</span>}
+                  </div>
+                  <div className="event-desc">{ev.description}</div>
+                  <div className="event-meta">📅 {fmtD(ev.event_time)}</div>
+                  {(ev.going_count > 0 || ev.not_going_count > 0) && (
+                    <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 4 }}>
+                      {ev.going_count > 0 && <span>✓ {ev.going_count} going</span>}
+                      {ev.going_count > 0 && ev.not_going_count > 0 && <span style={{ margin: '0 5px' }}>·</span>}
+                      {ev.not_going_count > 0 && <span>✗ {ev.not_going_count} not going</span>}
+                    </div>
+                  )}
+                </div>
+                {canDelete && (
+                  <button className="btn btn-sm" style={{ color: '#fa3e3e', border: '1px solid #fa3e3e', background: 'none', padding: '2px 8px', fontSize: 11 }}
+                    onClick={() => deleteEvent(ev.id)}>🗑</button>
+                )}
+              </div>
               <div className="event-rsvp">
                 <button
                   className={`btn btn-sm ${responses[ev.id] === 'going' ? 'btn-primary' : 'btn-secondary'}`}
@@ -351,7 +381,8 @@ export default function GroupDetail({ group, onBack }) {
                 >✗ Not going{ev.not_going_count > 0 ? ` (${ev.not_going_count})` : ''}</button>
               </div>
             </div>
-          ))}
+            )
+          })}
         </div>
       )}
 

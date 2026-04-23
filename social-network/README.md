@@ -211,7 +211,10 @@ Migrations are run automatically on startup from `pkg/db/migrations/sqlite/`.
 | POST   | `/api/groups/invite`         | Invite user to group              |
 | POST   | `/api/groups/join`           | Request to join group             |
 | POST   | `/api/groups/respond`        | Accept/decline membership         |
-| GET/POST | `/api/groups/events`      | List / create events              |
+| GET    | `/api/groups/events`         | List events for a group           |
+| POST   | `/api/groups/events`         | Create event (group creator only) |
+| PUT    | `/api/groups/events`         | Update event (creator/owner)      |
+| DELETE | `/api/groups/events`         | Delete event (creator/owner)      |
 | POST   | `/api/groups/events/respond` | RSVP to event                     |
 | GET    | `/api/notifications`         | List notifications                |
 | PUT    | `/api/notifications`         | Mark notifications as read        |

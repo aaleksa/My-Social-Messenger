@@ -137,9 +137,14 @@ func main() {
 	mux.Handle("/api/groups/join", protected(groupHandler.RequestJoin))
 	mux.Handle("/api/groups/respond", protected(groupHandler.RespondToMembership))
 	mux.Handle("/api/groups/events", protected(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodPost {
+		switch r.Method {
+		case http.MethodPost:
 			groupHandler.CreateEvent(w, r)
-		} else {
+		case http.MethodPut:
+			groupHandler.UpdateEvent(w, r)
+		case http.MethodDelete:
+			groupHandler.DeleteEvent(w, r)
+		default:
 			groupHandler.ListEvents(w, r)
 		}
 	}))

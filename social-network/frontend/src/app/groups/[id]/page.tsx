@@ -6,7 +6,7 @@ import { useWS } from "@/lib/WebSocketContext";
 import Sidebar from "@/components/Sidebar";
 
 type Group = { id: number; creator_id: number; title: string; description: string; created_at: string; my_status: string; member_count: number };
-type GroupEvent = { id: number; group_id: number; title: string; description: string; event_time: string; created_at: string };
+type GroupEvent = { id: number; group_id: number; creator_id: number; title: string; description: string; event_time: string; created_at: string; user_response?: string; going_count: number; not_going_count: number };
 type Member = { user_id: number; status: string; first_name: string; last_name: string; avatar: string };
 type User = { id: number; first_name: string; last_name: string; avatar: string };
 
@@ -46,7 +46,9 @@ export default function GroupPage() {
       setMe(u);
       setGroup(g);
       setPosts(p || []);
-      setEvents(ev || []);
+      const evList: GroupEvent[] = ev || [];
+      setEvents(evList);
+      setMyResponses(Object.fromEntries(evList.map((e: GroupEvent) => [e.id, e.user_response || ''])));
       setMembers(mem || []);
       setAllUsers(users || []);
     }).catch(() => {}).finally(() => setLoading(false));
@@ -140,9 +142,43 @@ export default function GroupPage() {
   }
 
   async function respondEvent(eventId: number, response: string) {
+    const prev = myResponses[eventId] || '';
+    const next = prev === response ? '' : response; // toggle off if clicking active
+    setMyResponses(r => ({ ...r, [eventId]: next }));
+    // Optimistically update counts
+    setEvents(evs => evs.map(ev => {
+      if (ev.id !== eventId) return ev;
+      let g = ev.going_count;
+      let ng = ev.not_going_count;
+      if (prev === 'going') g--;
+      if (prev === 'not_going') ng--;
+      if (next === 'going') g++;
+      if (next === 'not_going') ng++;
+      return { ...ev, going_count: g, not_going_count: ng };
+    }));
     try {
-      await api.respondToEvent({ event_id: eventId, response });
-      setMyResponses(r => ({ ...r, [eventId]: response }));
+      await api.respondToEvent({ event_id: eventId, response: next });
+    } catch {
+      // revert
+      setMyResponses(r => ({ ...r, [eventId]: prev }));
+      setEvents(evs => evs.map(ev => {
+        if (ev.id !== eventId) return ev;
+        let g = ev.going_count;
+        let ng = ev.not_going_count;
+        if (next === 'going') g--;
+        if (next === 'not_going') ng--;
+        if (prev === 'going') g++;
+        if (prev === 'not_going') ng++;
+        return { ...ev, going_count: g, not_going_count: ng };
+      }));
+    }
+  }
+
+  async function handleDeleteEvent(eventId: number) {
+    if (!confirm('Delete this event?')) return;
+    try {
+      await api.deleteEvent(eventId);
+      setEvents(evs => evs.filter(e => e.id !== eventId));
     } catch {}
   }
 
@@ -330,48 +366,65 @@ export default function GroupPage() {
             {/* EVENTS */}
             {tab === "events" && (
               <>
-                <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: "1rem", marginBottom: "1.25rem", boxShadow: "var(--shadow)" }}>
-                  <h4 style={{ fontWeight: 600, marginBottom: "0.75rem" }}>Create Event</h4>
-                  <form onSubmit={submitEvent}>
-                    <input placeholder="Event title *" value={eventForm.title} onChange={e => setEventForm(f => ({ ...f, title: e.target.value }))} required style={{ marginBottom: "0.75rem" }} />
-                    <textarea placeholder="Description (optional)" value={eventForm.description} onChange={e => setEventForm(f => ({ ...f, description: e.target.value }))} rows={2} style={{ marginBottom: "0.75rem", resize: "none" }} />
-                    <label style={{ fontSize: 13, color: "var(--text-muted)", display: "block", marginBottom: 4 }}>Date and Time *</label>
-                    <input type="datetime-local" value={eventForm.event_time} onChange={e => setEventForm(f => ({ ...f, event_time: e.target.value }))} required style={{ marginBottom: "0.75rem" }} />
-                    <button type="submit" disabled={!eventForm.title.trim() || !eventForm.event_time || eventBusy} style={{ background: "var(--accent)", color: "#fff", border: "none", borderRadius: "var(--radius)", padding: "0.5rem 1.25rem", fontWeight: 600, fontSize: 14, opacity: eventBusy ? 0.6 : 1, cursor: eventBusy ? "not-allowed" : "pointer" }}>
-                      {eventBusy ? "Creating..." : "Create Event"}
-                    </button>
-                  </form>
-                </div>
+                {isOwner && (
+                  <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: "1rem", marginBottom: "1.25rem", boxShadow: "var(--shadow)" }}>
+                    <h4 style={{ fontWeight: 600, marginBottom: "0.75rem" }}>Create Event</h4>
+                    <form onSubmit={submitEvent}>
+                      <input placeholder="Event title *" value={eventForm.title} onChange={e => setEventForm(f => ({ ...f, title: e.target.value }))} required style={{ marginBottom: "0.75rem" }} />
+                      <textarea placeholder="Description (optional)" value={eventForm.description} onChange={e => setEventForm(f => ({ ...f, description: e.target.value }))} rows={2} style={{ marginBottom: "0.75rem", resize: "none" }} />
+                      <label style={{ fontSize: 13, color: "var(--text-muted)", display: "block", marginBottom: 4 }}>Date and Time *</label>
+                      <input type="datetime-local" value={eventForm.event_time} onChange={e => setEventForm(f => ({ ...f, event_time: e.target.value }))} required style={{ marginBottom: "0.75rem" }} />
+                      <button type="submit" disabled={!eventForm.title.trim() || !eventForm.event_time || eventBusy} style={{ background: "var(--accent)", color: "#fff", border: "none", borderRadius: "var(--radius)", padding: "0.5rem 1.25rem", fontWeight: 600, fontSize: 14, opacity: eventBusy ? 0.6 : 1, cursor: eventBusy ? "not-allowed" : "pointer" }}>
+                        {eventBusy ? "Creating..." : "Create Event"}
+                      </button>
+                    </form>
+                  </div>
+                )}
                 {events.length === 0 ? (
                   <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: "2rem", textAlign: "center", color: "var(--text-muted)" }}>
-                    No events yet. Create the first one!
+                    {isOwner ? "No events yet. Create the first one!" : "No events yet."}
                   </div>
                 ) : events.map((ev: GroupEvent) => {
                   const myResp = myResponses[ev.id];
                   const evTimeStr = ev.event_time ? ev.event_time.replace(" ", "T").replace(/(\d{2}:\d{2}:\d{2})$/, "$1Z") : "";
                   const evDate = evTimeStr ? new Date(evTimeStr) : null;
+                  const isPast = evDate ? evDate < new Date() : false;
+                  const canDelete = me?.id === ev.creator_id || isOwner;
                   return (
-                    <div key={ev.id} style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: "1rem", marginBottom: "0.75rem", boxShadow: "var(--shadow)" }}>
+                    <div key={ev.id} style={{ background: "var(--bg-card)", border: `1px solid ${isPast ? "var(--border)" : "var(--border)"}`, borderRadius: "var(--radius)", padding: "1rem", marginBottom: "0.75rem", boxShadow: "var(--shadow)", opacity: isPast ? 0.65 : 1 }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "1rem" }}>
                         <div style={{ flex: 1 }}>
-                          <h4 style={{ fontWeight: 600, marginBottom: "0.25rem" }}>{ev.title}</h4>
+                          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.25rem" }}>
+                            <h4 style={{ fontWeight: 600, margin: 0 }}>{ev.title}</h4>
+                            {isPast && <span style={{ fontSize: 11, background: "var(--bg-input)", color: "var(--text-muted)", borderRadius: 4, padding: "1px 6px" }}>Past</span>}
+                          </div>
                           {ev.description && <p style={{ fontSize: 14, color: "var(--text-muted)", marginBottom: "0.5rem" }}>{ev.description}</p>}
-                          <p style={{ fontSize: 13, color: "var(--accent)", fontWeight: 500 }}>
-                            {evDate && !isNaN(evDate.getTime()) ? evDate.toLocaleString() : ev.event_time}
+                          <p style={{ fontSize: 13, color: isPast ? "var(--text-muted)" : "var(--accent)", fontWeight: 500, marginBottom: "0.4rem" }}>
+                            📅 {evDate && !isNaN(evDate.getTime()) ? evDate.toLocaleString() : ev.event_time}
                           </p>
+                          <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
+                            {ev.going_count > 0 && <span>✓ {ev.going_count} going</span>}
+                            {ev.going_count > 0 && ev.not_going_count > 0 && <span style={{ margin: "0 0.4rem" }}>·</span>}
+                            {ev.not_going_count > 0 && <span>✗ {ev.not_going_count} not going</span>}
+                          </div>
                         </div>
-                        <div style={{ display: "flex", gap: "0.5rem", flexShrink: 0 }}>
-                          {(["going", "not_going"] as const).map(s => (
-                            <button key={s} onClick={() => respondEvent(ev.id, s)} style={{
-                              border: `1.5px solid ${myResp === s ? "var(--accent)" : "var(--border)"}`,
-                              borderRadius: "var(--radius)", padding: "0.3rem 0.75rem", fontSize: 13, cursor: "pointer",
-                              background: myResp === s ? "var(--accent)" : "var(--bg-input)",
-                              color: myResp === s ? "#fff" : "var(--text)",
-                              fontWeight: myResp === s ? 600 : 400,
-                            }}>
-                              {s === "going" ? "Going" : "Not going"}
-                            </button>
-                          ))}
+                        <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", alignItems: "flex-end", flexShrink: 0 }}>
+                          <div style={{ display: "flex", gap: "0.5rem" }}>
+                            {(["going", "not_going"] as const).map(s => (
+                              <button key={s} onClick={() => respondEvent(ev.id, s)} style={{
+                                border: `1.5px solid ${myResp === s ? "var(--accent)" : "var(--border)"}`,
+                                borderRadius: "var(--radius)", padding: "0.3rem 0.75rem", fontSize: 13, cursor: "pointer",
+                                background: myResp === s ? "var(--accent)" : "var(--bg-input)",
+                                color: myResp === s ? "#fff" : "var(--text)",
+                                fontWeight: myResp === s ? 600 : 400,
+                              }}>
+                                {s === "going" ? "✓ Going" : "✗ Not going"}
+                              </button>
+                            ))}
+                          </div>
+                          {canDelete && (
+                            <button onClick={() => handleDeleteEvent(ev.id)} style={{ background: "transparent", color: "#fa3e3e", border: "1px solid #fa3e3e", borderRadius: "var(--radius)", padding: "0.2rem 0.6rem", fontSize: 12, cursor: "pointer" }}>🗑 Delete</button>
+                          )}
                         </div>
                       </div>
                     </div>

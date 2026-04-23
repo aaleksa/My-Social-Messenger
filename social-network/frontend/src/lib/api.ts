@@ -70,6 +70,8 @@ export const api = {
     request("/api/groups/respond", { method: "POST", body: JSON.stringify(data) }),
   createEvent: (data: object) => request("/api/groups/events", { method: "POST", body: JSON.stringify(data) }),
   listEvents: (groupId: number) => request(`/api/groups/events?group_id=${groupId}`),
+  updateEvent: (data: object) => request("/api/groups/events", { method: "PUT", body: JSON.stringify(data) }),
+  deleteEvent: (eventId: number) => request(`/api/groups/events?id=${eventId}`, { method: "DELETE" }),
   respondToEvent: (data: object) =>
     request("/api/groups/events/respond", { method: "POST", body: JSON.stringify(data) }),
 

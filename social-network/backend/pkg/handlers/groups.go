@@ -306,7 +306,7 @@ func (h *GroupHandler) CreateEvent(w http.ResponseWriter, r *http.Request) {
 
 	eventID, _ := result.LastInsertId()
 
-	// Notify all group members
+	// Notify all group members + push WS
 	rows, _ := h.DB.Query(
 		`SELECT user_id FROM group_members WHERE group_id = ? AND status = 'accepted' AND user_id != ?`,
 		req.GroupID, userID,
@@ -319,6 +319,7 @@ func (h *GroupHandler) CreateEvent(w http.ResponseWriter, r *http.Request) {
 			`INSERT INTO notifications (user_id, actor_id, type, reference_id) VALUES (?, ?, 'group_event', ?)`,
 			memberID, userID, eventID,
 		)
+		h.pushNotif(memberID)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -350,6 +351,67 @@ func (h *GroupHandler) RespondToEvent(w http.ResponseWriter, r *http.Request) {
 		)
 	}
 
+	w.WriteHeader(http.StatusOK)
+}
+
+// DELETE /api/groups/events?id=1  — only event creator or group creator
+func (h *GroupHandler) DeleteEvent(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserID(r)
+	eventID, _ := strconv.ParseInt(r.URL.Query().Get("id"), 10, 64)
+	if eventID == 0 {
+		http.Error(w, "missing id", http.StatusBadRequest)
+		return
+	}
+
+	// Allow only the event creator or group creator
+	var creatorID, groupID int64
+	if err := h.DB.QueryRow(`SELECT creator_id, group_id FROM group_events WHERE id = ?`, eventID).Scan(&creatorID, &groupID); err != nil {
+		http.Error(w, "event not found", http.StatusNotFound)
+		return
+	}
+	var groupCreatorID int64
+	h.DB.QueryRow(`SELECT creator_id FROM groups WHERE id = ?`, groupID).Scan(&groupCreatorID)
+	if userID != creatorID && userID != groupCreatorID {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+
+	h.DB.Exec(`DELETE FROM group_events WHERE id = ?`, eventID)
+	w.WriteHeader(http.StatusOK)
+}
+
+// PUT /api/groups/events  body: {"id":1,"title":"...","description":"...","event_time":"..."}
+// Only event creator or group creator
+func (h *GroupHandler) UpdateEvent(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserID(r)
+
+	var req struct {
+		ID          int64  `json:"id"`
+		Title       string `json:"title"`
+		Description string `json:"description"`
+		EventTime   string `json:"event_time"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.ID == 0 || req.Title == "" {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	var creatorID, groupID int64
+	if err := h.DB.QueryRow(`SELECT creator_id, group_id FROM group_events WHERE id = ?`, req.ID).Scan(&creatorID, &groupID); err != nil {
+		http.Error(w, "event not found", http.StatusNotFound)
+		return
+	}
+	var groupCreatorID int64
+	h.DB.QueryRow(`SELECT creator_id FROM groups WHERE id = ?`, groupID).Scan(&groupCreatorID)
+	if userID != creatorID && userID != groupCreatorID {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+
+	h.DB.Exec(
+		`UPDATE group_events SET title = ?, description = ?, event_time = ? WHERE id = ?`,
+		req.Title, req.Description, req.EventTime, req.ID,
+	)
 	w.WriteHeader(http.StatusOK)
 }
 
