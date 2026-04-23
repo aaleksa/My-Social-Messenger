@@ -13,7 +13,7 @@ const EMOJIS = [
 ]
 
 export default function GroupDetail({ group, onBack }) {
-  const { tok, me, users, cachedMsgs, setCachedMsgs, pushMsg, notifCnt } = useStore()
+  const { tok, me, users, cachedMsgs, setCachedMsgs, pushMsg, notifCnt, showToast } = useStore()
   const [tab, setTab] = useState('posts')
   const [posts, setPosts] = useState([])
   const [members, setMembers] = useState([])
@@ -112,13 +112,41 @@ export default function GroupDetail({ group, onBack }) {
   }
 
   async function rsvp(eventId, status) {
-    setResponses(prev => ({ ...prev, [eventId]: status }))
+    const prev = responses[eventId] || ''
+    // Toggle off if clicking the already-active button
+    const next = prev === status ? '' : status
+    setResponses(r => ({ ...r, [eventId]: next }))
+    // Optimistically update counts
+    setEvents(evs => evs.map(ev => {
+      if (ev.id !== eventId) return ev
+      let g = ev.going_count
+      let ng = ev.not_going_count
+      if (prev === 'going') g--
+      if (prev === 'not_going') ng--
+      if (next === 'going') g++
+      if (next === 'not_going') ng++
+      return { ...ev, going_count: g, not_going_count: ng }
+    }))
     try {
       await apiFetch(tok, '/api/groups/events/respond', {
-        method: 'POST', body: JSON.stringify({ event_id: eventId, response: status }),
+        method: 'POST', body: JSON.stringify({ event_id: eventId, response: next }),
       })
+      if (next === 'going') showToast('✓ Marked as going')
+      else if (next === 'not_going') showToast('✗ Marked as not going')
+      else showToast('Response removed')
     } catch (_) {
-      setResponses(prev => ({ ...prev, [eventId]: '' }))
+      // Revert on error
+      setResponses(r => ({ ...r, [eventId]: prev }))
+      setEvents(evs => evs.map(ev => {
+        if (ev.id !== eventId) return ev
+        let g = ev.going_count
+        let ng = ev.not_going_count
+        if (next === 'going') g--
+        if (next === 'not_going') ng--
+        if (prev === 'going') g++
+        if (prev === 'not_going') ng++
+        return { ...ev, going_count: g, not_going_count: ng }
+      }))
     }
   }
 
@@ -316,11 +344,11 @@ export default function GroupDetail({ group, onBack }) {
                 <button
                   className={`btn btn-sm ${responses[ev.id] === 'going' ? 'btn-primary' : 'btn-secondary'}`}
                   onClick={() => rsvp(ev.id, 'going')}
-                >✓ Going</button>
+                >✓ Going{ev.going_count > 0 ? ` (${ev.going_count})` : ''}</button>
                 <button
                   className={`btn btn-sm ${responses[ev.id] === 'not_going' ? 'btn-primary' : 'btn-secondary'}`}
                   onClick={() => rsvp(ev.id, 'not_going')}
-                >✗ Not going</button>
+                >✗ Not going{ev.not_going_count > 0 ? ` (${ev.not_going_count})` : ''}</button>
               </div>
             </div>
           ))}

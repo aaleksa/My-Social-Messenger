@@ -326,23 +326,29 @@ func (h *GroupHandler) CreateEvent(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]int64{"event_id": eventID})
 }
 
-// POST /api/groups/events/respond  body: {"event_id":1,"response":"going"}
+// POST /api/groups/events/respond  body: {"event_id":1,"response":"going|not_going|"}
+// Sending response="" removes the user's RSVP (toggle off)
 func (h *GroupHandler) RespondToEvent(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserID(r)
 
 	var req struct {
 		EventID  int64  `json:"event_id"`
-		Response string `json:"response"` // going, not_going
+		Response string `json:"response"` // going | not_going | "" (remove)
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	h.DB.Exec(
-		`INSERT OR REPLACE INTO event_responses (event_id, user_id, response) VALUES (?, ?, ?)`,
-		req.EventID, userID, req.Response,
-	)
+	if req.Response == "" {
+		// Toggle off — remove the response
+		h.DB.Exec(`DELETE FROM event_responses WHERE event_id = ? AND user_id = ?`, req.EventID, userID)
+	} else {
+		h.DB.Exec(
+			`INSERT OR REPLACE INTO event_responses (event_id, user_id, response) VALUES (?, ?, ?)`,
+			req.EventID, userID, req.Response,
+		)
+	}
 
 	w.WriteHeader(http.StatusOK)
 }
@@ -354,7 +360,9 @@ func (h *GroupHandler) ListEvents(w http.ResponseWriter, r *http.Request) {
 
 	rows, err := h.DB.Query(
 		`SELECT ge.id, ge.group_id, ge.creator_id, ge.title, ge.description, ge.event_time, ge.created_at,
-		        COALESCE(er.response, '') AS user_response
+		        COALESCE(er.response, '') AS user_response,
+		        (SELECT COUNT(*) FROM event_responses WHERE event_id = ge.id AND response = 'going') AS going_count,
+		        (SELECT COUNT(*) FROM event_responses WHERE event_id = ge.id AND response = 'not_going') AS not_going_count
 		 FROM group_events ge
 		 LEFT JOIN event_responses er ON er.event_id = ge.id AND er.user_id = ?
 		 WHERE ge.group_id = ? ORDER BY ge.event_time ASC`,
@@ -369,7 +377,7 @@ func (h *GroupHandler) ListEvents(w http.ResponseWriter, r *http.Request) {
 	var events []models.GroupEvent
 	for rows.Next() {
 		var e models.GroupEvent
-		rows.Scan(&e.ID, &e.GroupID, &e.CreatorID, &e.Title, &e.Description, &e.EventTime, &e.CreatedAt, &e.UserResponse)
+		rows.Scan(&e.ID, &e.GroupID, &e.CreatorID, &e.Title, &e.Description, &e.EventTime, &e.CreatedAt, &e.UserResponse, &e.GoingCount, &e.NotGoingCount)
 		events = append(events, e)
 	}
 

@@ -27,6 +27,8 @@ type GroupEvent struct {
 	EventTime    time.Time `json:"event_time"`
 	CreatedAt    time.Time `json:"created_at"`
 	UserResponse string    `json:"user_response,omitempty"` // going | not_going | ""
+	GoingCount   int       `json:"going_count"`
+	NotGoingCount int      `json:"not_going_count"`
 }
 
 type EventResponse struct {
