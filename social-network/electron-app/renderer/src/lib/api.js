@@ -7,7 +7,7 @@ export const dname = u => u
   : 'Unknown'
 export const inits  = u  => dname(u).slice(0, 2).toUpperCase()
 export const fmt    = ts => ts ? new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''
-export const fmtD   = ts => ts ? new Date(ts).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''
+export const fmtD   = ts => ts ? new Date(ts).toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''
 export const avSrc  = u  => u?.avatar ? `${API}/uploads/${u.avatar}` : null
 
 // ── Fetch wrappers ─────────────────────────────────────────────

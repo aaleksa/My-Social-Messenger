@@ -366,8 +366,12 @@ export default function GroupDetail({ group, onBack }) {
                   )}
                 </div>
                 {canDelete && (
-                  <button className="btn btn-sm" style={{ color: '#fa3e3e', border: '1px solid #fa3e3e', background: 'none', padding: '2px 8px', fontSize: 11 }}
-                    onClick={() => deleteEvent(ev.id)}>🗑</button>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button className="btn btn-sm" style={{ color: '#888', border: '1px solid #888', background: 'none', padding: '2px 8px', fontSize: 11 }}
+                      onClick={() => setEditEvent(ev)} title="Edit event">✎</button>
+                    <button className="btn btn-sm" style={{ color: '#fa3e3e', border: '1px solid #fa3e3e', background: 'none', padding: '2px 8px', fontSize: 11 }}
+                      onClick={() => deleteEvent(ev.id)} title="Delete event">🗑</button>
+                  </div>
                 )}
               </div>
               <div className="event-rsvp">
@@ -382,6 +386,43 @@ export default function GroupDetail({ group, onBack }) {
               </div>
             </div>
             )
+          // Edit event modal state
+          const [editEvent, setEditEvent] = useState(null)
+            async function handleEditEvent(e) {
+              e.preventDefault()
+              if (!editEvent) return
+              if (!editEvent.title.trim()) { alert('Title is required'); return }
+              if (!editEvent.event_time) { alert('Date & Time is required'); return }
+              try {
+                await apiFetch(tok, `/api/groups/events`, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json', 'X-Session-ID': tok },
+                  body: JSON.stringify({
+                    id: editEvent.id,
+                    title: editEvent.title.trim(),
+                    description: editEvent.description || '',
+                    event_time: editEvent.event_time,
+                    group_id: group.id,
+                  })
+                })
+                setEditEvent(null)
+                const updated = await apiFetch(tok, `/api/groups/events?group_id=${group.id}`)
+                setEvents(Array.isArray(updated) ? updated : [])
+                showToast('Event updated')
+              } catch (err) {
+                alert('Network error: ' + (err.message || err))
+              }
+            }
+                {editEvent && (
+                  <Modal title="Edit Event" onClose={() => setEditEvent(null)}>
+                    <form onSubmit={handleEditEvent}>
+                      <div className="fg"><label>Title</label><input value={editEvent.title} onChange={e => setEditEvent(ev => ({...ev, title: e.target.value}))} required /></div>
+                      <div className="fg"><label>Description</label><textarea value={editEvent.description} onChange={e => setEditEvent(ev => ({...ev, description: e.target.value}))} /></div>
+                      <div className="fg"><label>Date & Time</label><input type="datetime-local" value={editEvent.event_time} onChange={e => setEditEvent(ev => ({...ev, event_time: e.target.value}))} required /></div>
+                      <button className="btn btn-primary" type="submit" style={{ width: '100%' }}>Save Changes</button>
+                    </form>
+                  </Modal>
+                )}
           })}
         </div>
       )}
