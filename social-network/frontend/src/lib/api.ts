@@ -1,3 +1,31 @@
+        // Chat Search
+        searchMessages: (recipientId: number, query: string) =>
+          request(`/api/messages/search?recipient_id=${recipientId}&query=${encodeURIComponent(query)}`),
+        searchGroupMessages: (groupId: number, query: string) =>
+          request(`/api/messages/search?group_id=${groupId}&query=${encodeURIComponent(query)}`),
+      // Message Forwarding
+      forwardMessage: (message_id: number, recipient_id: number) =>
+        request("/api/messages/forward", { method: "POST", body: JSON.stringify({ message_id, recipient_id }) }),
+      forwardGroupMessage: (group_message_id: number, group_id: number) =>
+        request("/api/messages/group/forward", { method: "POST", body: JSON.stringify({ group_message_id, group_id }) }),
+    // Message Reactions
+    reactMessage: (message_id: number, emoji: string) =>
+      request("/api/messages/react", { method: "POST", body: JSON.stringify({ message_id, emoji }) }),
+    unreactMessage: (message_id: number, emoji: string) =>
+      request("/api/messages/react", { method: "DELETE", body: JSON.stringify({ message_id, emoji }) }),
+    reactGroupMessage: (group_message_id: number, emoji: string) =>
+      request("/api/messages/group/react", { method: "POST", body: JSON.stringify({ group_message_id, emoji }) }),
+    unreactGroupMessage: (group_message_id: number, emoji: string) =>
+      request("/api/messages/group/react", { method: "DELETE", body: JSON.stringify({ group_message_id, emoji }) }),
+  // Edit/Delete Chat Messages
+  editMessage: (id: number, content: string, image_url?: string) =>
+    request(`/api/messages/${id}`, { method: "PUT", body: JSON.stringify({ content, image_url }) }),
+  deleteMessage: (id: number) =>
+    request(`/api/messages/${id}`, { method: "DELETE" }),
+  editGroupMessage: (id: number, content: string, image_url?: string) =>
+    request(`/api/messages/group/${id}`, { method: "PUT", body: JSON.stringify({ content, image_url }) }),
+  deleteGroupMessage: (id: number) =>
+    request(`/api/messages/group/${id}`, { method: "DELETE" }),
 const API_BASE = "";
 
 async function request(path: string, options?: RequestInit) {

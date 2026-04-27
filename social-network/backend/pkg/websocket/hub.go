@@ -25,6 +25,7 @@ type WSMessage struct {
 	Content     string          `json:"content"`
 	ImageURL    string          `json:"image_url,omitempty"`
 	ClientType  string          `json:"client_type,omitempty"`
+	QuotedText  string          `json:"quoted_text,omitempty"`
 	CreatedAt   time.Time       `json:"created_at"`
 	Payload     json.RawMessage `json:"payload,omitempty"`
 }

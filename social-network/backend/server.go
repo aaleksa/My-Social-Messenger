@@ -5,10 +5,10 @@ import (
 	"log"
 	"net/http"
 	"os"
-
 	"social-network/pkg/db/sqlite"
 	"social-network/pkg/handlers"
 	"social-network/pkg/middleware"
+
 	ws "social-network/pkg/websocket"
 )
 
@@ -190,7 +190,7 @@ func main() {
 		json.NewEncoder(w).Encode(result)
 	}))
 
-	mux.HandleFunc("/api/upload", handlers.UploadImage)
+	mux.HandleFunc("/api/upload", handlers.UploadFile)
 
 	// WebSocket endpoint
 	mux.Handle("/api/ws", authMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

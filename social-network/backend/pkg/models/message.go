@@ -8,6 +8,8 @@ type Message struct {
 	RecipientID int64     `json:"recipient_id"`
 	Content     string    `json:"content"`
 	ImageURL    string    `json:"image_url,omitempty"`
+	ReplyTo     *int64    `json:"reply_to,omitempty"`
+	QuotedText  string    `json:"quoted_text,omitempty"`
 	CreatedAt   time.Time `json:"created_at"`
 }
 
@@ -17,5 +19,7 @@ type GroupMessage struct {
 	SenderID  int64     `json:"sender_id"`
 	Content   string    `json:"content"`
 	ImageURL  string    `json:"image_url,omitempty"`
+	ReplyTo   *int64    `json:"reply_to,omitempty"`
+	QuotedText string   `json:"quoted_text,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
 }
