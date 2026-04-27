@@ -32,7 +32,8 @@ export default function ChatPage() {
 }
 
 function ChatPageInner() {
-  // ...existing state...
+  // Selected contact state must be first
+  const [selected, setSelected] = useState<Contact | null>(null);
   // Pinned messages state
   const [pinnedIds, setPinnedIds] = useState<number[]>([]);
   const [showPinned, setShowPinned] = useState(false);
