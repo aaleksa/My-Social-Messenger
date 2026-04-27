@@ -33,7 +33,6 @@ export default function ChatPage() {
 
 function ChatPageInner() {
   // ...existing state...
-  const [selected, setSelected] = useState<Contact | null>(null);
   // Pinned messages state
   const [pinnedIds, setPinnedIds] = useState<number[]>([]);
   const [showPinned, setShowPinned] = useState(false);
@@ -77,7 +76,6 @@ function ChatPageInner() {
   const [reactions, setReactions] = useState<Record<number, { [emoji: string]: number; mine: string[] }>>({});
   const [me, setMe] = useState<any>(null);
   const [contacts, setContacts] = useState<Contact[]>([]);
-  const [selected, setSelected] = useState<Contact | null>(null);
   const searchParams = useSearchParams();
   const preselectedUserId = searchParams ? Number(searchParams.get("userId")) : 0;
   const [messages, setMessages] = useState<Message[]>([]);
