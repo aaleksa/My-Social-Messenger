@@ -27,10 +27,38 @@ export default function GroupDetail({ group, onBack }) {
   const [inviting, setInviting] = useState({})
   const [chatInput, setChatInput] = useState('')
   const [showEmoji, setShowEmoji] = useState(false)
+  const [editEvent, setEditEvent] = useState(null)
   const chatKey = `g:${group.id}`
   const chatMsgs = cachedMsgs[chatKey] || []
   const chatEndRef = useRef(null)
 
+  async function handleEditEvent(e) {
+    e.preventDefault()
+    if (!editEvent) return
+    if (!editEvent.title.trim()) { alert('Title is required'); return }
+    if (!editEvent.event_time) { alert('Date & Time is required'); return }
+    try {
+      await apiFetch(tok, `/api/groups/events`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'X-Session-ID': tok },
+        body: JSON.stringify({
+          id: editEvent.id,
+          title: editEvent.title.trim(),
+          description: editEvent.description || '',
+          event_time: editEvent.event_time,
+          group_id: group.id,
+        })
+      })
+      setEditEvent(null)
+      const updated = await apiFetch(tok, `/api/groups/events?group_id=${group.id}`)
+      setEvents(Array.isArray(updated) ? updated : [])
+      showToast('Event updated')
+    } catch (err) {
+      alert('Network error: ' + (err.message || err))
+    }
+  }
+
+  // Initial data fetch and polling
   useEffect(() => {
     apiFetch(tok, `/api/posts?group_id=${group.id}`).then(d => setPosts(d || [])).catch(() => {})
     apiFetch(tok, `/api/groups/members?group_id=${group.id}`).then(d => {
@@ -56,7 +84,7 @@ export default function GroupDetail({ group, onBack }) {
         .catch(() => {})
     }, 4000)
     return () => clearInterval(pollChat)
-  }, [group.id])
+  }, [group.id]);
 
   // Re-fetch membership status when a notification arrives (e.g. group_join_accepted)
   useEffect(() => {
@@ -368,7 +396,7 @@ export default function GroupDetail({ group, onBack }) {
                 {canDelete && (
                   <div style={{ display: 'flex', gap: 6 }}>
                     <button className="btn btn-sm" style={{ color: '#888', border: '1px solid #888', background: 'none', padding: '2px 8px', fontSize: 11 }}
-                      onClick={() => setEditEvent(ev)} title="Edit event">✎</button>
+                      onClick={() => setEditEvent({ ...ev })} title="Edit event">✎</button>
                     <button className="btn btn-sm" style={{ color: '#fa3e3e', border: '1px solid #fa3e3e', background: 'none', padding: '2px 8px', fontSize: 11 }}
                       onClick={() => deleteEvent(ev.id)} title="Delete event">🗑</button>
                   </div>
@@ -386,43 +414,33 @@ export default function GroupDetail({ group, onBack }) {
               </div>
             </div>
             )
-          // Edit event modal state
-          const [editEvent, setEditEvent] = useState(null)
-            async function handleEditEvent(e) {
-              e.preventDefault()
-              if (!editEvent) return
-              if (!editEvent.title.trim()) { alert('Title is required'); return }
-              if (!editEvent.event_time) { alert('Date & Time is required'); return }
-              try {
-                await apiFetch(tok, `/api/groups/events`, {
-                  method: 'PUT',
-                  headers: { 'Content-Type': 'application/json', 'X-Session-ID': tok },
-                  body: JSON.stringify({
-                    id: editEvent.id,
-                    title: editEvent.title.trim(),
-                    description: editEvent.description || '',
-                    event_time: editEvent.event_time,
-                    group_id: group.id,
-                  })
-                })
-                setEditEvent(null)
-                const updated = await apiFetch(tok, `/api/groups/events?group_id=${group.id}`)
-                setEvents(Array.isArray(updated) ? updated : [])
-                showToast('Event updated')
-              } catch (err) {
-                alert('Network error: ' + (err.message || err))
-              }
-            }
-                {editEvent && (
-                  <Modal title="Edit Event" onClose={() => setEditEvent(null)}>
-                    <form onSubmit={handleEditEvent}>
-                      <div className="fg"><label>Title</label><input value={editEvent.title} onChange={e => setEditEvent(ev => ({...ev, title: e.target.value}))} required /></div>
-                      <div className="fg"><label>Description</label><textarea value={editEvent.description} onChange={e => setEditEvent(ev => ({...ev, description: e.target.value}))} /></div>
-                      <div className="fg"><label>Date & Time</label><input type="datetime-local" value={editEvent.event_time} onChange={e => setEditEvent(ev => ({...ev, event_time: e.target.value}))} required /></div>
-                      <button className="btn btn-primary" type="submit" style={{ width: '100%' }}>Save Changes</button>
-                    </form>
-                  </Modal>
-                )}
+// Edit event modal state (move to top level)
+const [editEvent, setEditEvent] = useState(null)
+async function handleEditEvent(e) {
+  e.preventDefault()
+  if (!editEvent) return
+  if (!editEvent.title.trim()) { alert('Title is required'); return }
+  if (!editEvent.event_time) { alert('Date & Time is required'); return }
+  try {
+    await apiFetch(tok, `/api/groups/events`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'X-Session-ID': tok },
+      body: JSON.stringify({
+        id: editEvent.id,
+        title: editEvent.title.trim(),
+        description: editEvent.description || '',
+        event_time: editEvent.event_time,
+        group_id: group.id,
+      })
+    })
+    setEditEvent(null)
+    const updated = await apiFetch(tok, `/api/groups/events?group_id=${group.id}`)
+    setEvents(Array.isArray(updated) ? updated : [])
+    showToast('Event updated')
+  } catch (err) {
+    alert('Network error: ' + (err.message || err))
+  }
+}
           })}
         </div>
       )}
@@ -451,48 +469,17 @@ export default function GroupDetail({ group, onBack }) {
             })}
             <div ref={chatEndRef} />
           </div>
-          {isMember && (
-            <form onSubmit={sendGroupMsg} style={{ display: 'flex', gap: 8, paddingTop: 10, borderTop: '1px solid var(--border)', position: 'relative' }}>
-              <button type="button" onClick={e => { e.stopPropagation(); setShowEmoji(v => !v) }}
-                style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', padding: '0 4px', color: 'var(--text-dim)' }}
-              >😊</button>
-              {showEmoji && (
-                <div onClick={e => e.stopPropagation()} style={{
-                  position: 'absolute', bottom: 52, left: 0,
-                  background: 'var(--bg-card)', border: '1px solid var(--border)',
-                  borderRadius: 10, padding: 8,
-                  display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: 4,
-                  zIndex: 20, boxShadow: '0 4px 20px rgba(0,0,0,.3)',
-                }}>
-                  {EMOJIS.map(em => (
-                    <button key={em} type="button"
-                      onClick={() => { setChatInput(v => v + em); setShowEmoji(false) }}
-                      style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', borderRadius: 4, padding: '2px 4px' }}
-                    >{em}</button>
-                  ))}
-                </div>
-              )}
-              <input
-                style={{ flex: 1, padding: '8px 14px', background: 'var(--bg-mid)', border: '1px solid var(--border)', borderRadius: 20, color: 'var(--text)', fontSize: 13, outline: 'none' }}
-                placeholder="Type a message…"
-                value={chatInput}
-                onChange={e => setChatInput(e.target.value)}
-                onClick={() => setShowEmoji(false)}
-              />
-              <button className="btn btn-primary btn-sm" type="submit">Send</button>
-            </form>
-          )}
-          {!isMember && <div style={{ textAlign: 'center', padding: 12, fontSize: 13, color: 'var(--text-dim)' }}>Join the group to send messages</div>}
         </div>
       )}
 
-      {showEvent && (
-        <Modal title="Create Event" onClose={() => setShowEvent(false)}>
-          <form onSubmit={createEvent}>
-            <div className="fg"><label>Title</label><input value={ev.title} onChange={e => setEv(p => ({...p, title: e.target.value}))} required /></div>
-            <div className="fg"><label>Description</label><textarea value={ev.description} onChange={e => setEv(p => ({...p, description: e.target.value}))} /></div>
-            <div className="fg"><label>Date & Time</label><input type="datetime-local" value={ev.event_time} onChange={e => setEv(p => ({...p, event_time: e.target.value}))} required /></div>
-            <button className="btn btn-primary" type="submit" style={{ width: '100%' }}>Create Event</button>
+      {/* Edit Event Modal (single, outside map) */}
+      {editEvent && (
+        <Modal title="Edit Event" onClose={() => setEditEvent(null)}>
+          <form onSubmit={handleEditEvent}>
+            <div className="fg"><label>Title</label><input value={editEvent.title} onChange={e => setEditEvent(ev => ({...ev, title: e.target.value}))} required /></div>
+            <div className="fg"><label>Description</label><textarea value={editEvent.description} onChange={e => setEditEvent(ev => ({...ev, description: e.target.value}))} /></div>
+            <div className="fg"><label>Date & Time</label><input type="datetime-local" value={editEvent.event_time} onChange={e => setEditEvent(ev => ({...ev, event_time: e.target.value}))} required /></div>
+            <button className="btn btn-primary" type="submit" style={{ width: '100%' }}>Save Changes</button>
           </form>
         </Modal>
       )}

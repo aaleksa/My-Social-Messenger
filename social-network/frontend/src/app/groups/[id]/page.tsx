@@ -45,12 +45,8 @@ export default function GroupPage() {
     ]).then(([u, g, p, ev, mem, users]) => {
       setMe(u);
       setGroup(g);
+      // Edit event modal state
       setPosts(p || []);
-      const evList: GroupEvent[] = ev || [];
-      setEvents(evList);
-      setMyResponses(Object.fromEntries(evList.map((e: GroupEvent) => [e.id, e.user_response || ''])));
-      setMembers(mem || []);
-      setAllUsers(users || []);
     }).catch(() => {}).finally(() => setLoading(false));
   }, [gid]);
 
@@ -423,8 +419,49 @@ export default function GroupPage() {
                             ))}
                           </div>
                           {canDelete && (
-                            <button onClick={() => handleDeleteEvent(ev.id)} style={{ background: "transparent", color: "#fa3e3e", border: "1px solid #fa3e3e", borderRadius: "var(--radius)", padding: "0.2rem 0.6rem", fontSize: 12, cursor: "pointer" }}>🗑 Delete</button>
+                            <div style={{ display: "flex", gap: "0.5rem" }}>
+                              <button onClick={() => openEditModal(ev)} style={{ background: "transparent", color: "#888", border: "1px solid #888", borderRadius: "var(--radius)", padding: "0.2rem 0.6rem", fontSize: 12, cursor: "pointer" }}>✎ Edit</button>
+                              <button onClick={() => handleDeleteEvent(ev.id)} style={{ background: "transparent", color: "#fa3e3e", border: "1px solid #fa3e3e", borderRadius: "var(--radius)", padding: "0.2rem 0.6rem", fontSize: 12, cursor: "pointer" }}>🗑 Delete</button>
+                            </div>
                           )}
+                              {/* Edit Event Modal */}
+                              {editEvent && (
+                                <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.45)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={e => e.target === e.currentTarget && setEditEvent(null)}>
+                                  <div style={{ background: "var(--bg-card)", borderRadius: 12, padding: 28, minWidth: 340, boxShadow: "var(--shadow)" }}>
+                                    <h3 style={{ marginBottom: 18 }}>Edit Event</h3>
+                                    <form onSubmit={handleEditEvent}>
+                                      <input
+                                        placeholder="Event title *"
+                                        value={editEvent.title}
+                                        onChange={e => setEditEvent(ev => ev ? { ...ev, title: e.target.value } : ev)}
+                                        required
+                                        style={{ marginBottom: "0.75rem", width: "100%" }}
+                                      />
+                                      <textarea
+                                        placeholder="Description (optional)"
+                                        value={editEvent.description}
+                                        onChange={e => setEditEvent(ev => ev ? { ...ev, description: e.target.value } : ev)}
+                                        rows={2}
+                                        style={{ marginBottom: "0.75rem", resize: "none", width: "100%" }}
+                                      />
+                                      <label style={{ fontSize: 13, color: "var(--text-muted)", display: "block", marginBottom: 4 }}>Date and Time *</label>
+                                      <input
+                                        type="datetime-local"
+                                        value={editEvent.event_time}
+                                        onChange={e => setEditEvent(ev => ev ? { ...ev, event_time: e.target.value } : ev)}
+                                        required
+                                        style={{ marginBottom: "0.75rem", width: "100%" }}
+                                      />
+                                      <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
+                                        <button type="button" onClick={() => setEditEvent(null)} style={{ flex: 1, background: "#eee", color: "#333", border: "none", borderRadius: "var(--radius)", padding: "0.5rem 1.25rem", fontWeight: 500, fontSize: 14, cursor: "pointer" }}>Cancel</button>
+                                        <button type="submit" disabled={!editEvent.title.trim() || !editEvent.event_time || editBusy} style={{ flex: 1, background: "var(--accent)", color: "#fff", border: "none", borderRadius: "var(--radius)", padding: "0.5rem 1.25rem", fontWeight: 600, fontSize: 14, opacity: editBusy ? 0.6 : 1, cursor: editBusy ? "not-allowed" : "pointer" }}>
+                                          {editBusy ? "Saving..." : "Save Changes"}
+                                        </button>
+                                      </div>
+                                    </form>
+                                  </div>
+                                </div>
+                              )}
                         </div>
                       </div>
                     </div>
