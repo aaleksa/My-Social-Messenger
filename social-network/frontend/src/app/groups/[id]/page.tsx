@@ -1,21 +1,18 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import dynamic from "next/dynamic";
-import { useWebSocket } from "@/lib/useWebSocket";
-const GroupCall = dynamic(() => import("./GroupCall"), { ssr: false });
-  // Group call state
-  const [callOpen, setCallOpen] = useState(false);
-  const [callMessages, setCallMessages] = useState<any[]>([]);
-  const { send: wsSend, connected: wsConnected } = useWebSocket((msg) => {
-    // Only handle call-related messages for this group
-    if (msg.group_id === gid && msg.type.startsWith("call-")) {
-      setCallMessages((prev) => [...prev, msg]);
-    }
-  });
-import { useParams } from "next/navigation";
+
 import { api } from "@/lib/api";
+import { useWebSocket } from "@/lib/useWebSocket";
 import { useWS } from "@/lib/WebSocketContext";
 import Sidebar from "@/components/Sidebar";
+import { useParams } from "next/navigation";
+import dynamic from "next/dynamic";
+
+type Group = { id: number; creator_id: number; title: string; description: string; created_at: string; my_status: string; member_count: number };
+type GroupEvent = { id: number; group_id: number; creator_id: number; title: string; description: string; event_time: string; created_at: string; user_response?: string; going_count: number; not_going_count: number };
+type Member = { user_id: number; status: string; first_name: string; last_name: string; avatar: string };
+type User = { id: number; first_name: string; last_name: string; avatar: string };
+const GroupCall = dynamic(() => import("./GroupCall"), { ssr: false });
 
 type Group = { id: number; creator_id: number; title: string; description: string; created_at: string; my_status: string; member_count: number };
 type GroupEvent = { id: number; group_id: number; creator_id: number; title: string; description: string; event_time: string; created_at: string; user_response?: string; going_count: number; not_going_count: number };
@@ -23,8 +20,17 @@ type Member = { user_id: number; status: string; first_name: string; last_name: 
 type User = { id: number; first_name: string; last_name: string; avatar: string };
 
 export default function GroupPage() {
+  // Group call state (must be inside component)
+  const [callOpen, setCallOpen] = useState(false);
+  const [callMessages, setCallMessages] = useState<any[]>([]);
   const { id } = useParams();
   const gid = Number(id);
+  const { send: wsSend, connected: wsConnected } = useWebSocket((msg) => {
+    // Only handle call-related messages for this group
+    if (msg.group_id === gid && msg.type.startsWith("call-")) {
+      setCallMessages((prev) => [...prev, msg]);
+    }
+  });
   const [group, setGroup] = useState<Group | null>(null);
   const [events, setEvents] = useState<GroupEvent[]>([]);
   const [posts, setPosts] = useState<any[]>([]);
@@ -548,15 +554,6 @@ export default function GroupPage() {
             {/* CHAT */}
             {tab === "chat" && (
               <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "var(--radius)", boxShadow: "var(--shadow)", display: "flex", flexDirection: "column", height: 480, position: "relative" }}>
-                {/* Call button */}
-                <button
-                  onClick={() => setCallOpen(true)}
-                  style={{ position: "absolute", top: 12, right: 16, zIndex: 2, background: "var(--accent)", color: "#fff", border: "none", borderRadius: 8, padding: "0.4rem 1.1rem", fontWeight: 600, fontSize: 15, cursor: "pointer", boxShadow: "0 2px 8px #0001" }}
-                  disabled={!wsConnected}
-                  title={wsConnected ? "Start group call" : "Connecting..."}
-                >
-                  📞 Call
-                </button>
                 {/* Chat messages */}
                 <div style={{ flex: 1, overflowY: "auto", padding: "1rem", display: "flex", flexDirection: "column", gap: 10 }}>
                   {chatMessages.length === 0 && (
@@ -587,7 +584,7 @@ export default function GroupPage() {
                   <div ref={chatBottomRef} />
                 </div>
                 {isMember ? (
-                  <form onSubmit={sendChatMessage} style={{ display: "flex", gap: 8, padding: "0.75rem 1rem", borderTop: "1px solid var(--border)" }}>
+                  <form onSubmit={sendChatMessage} style={{ display: "flex", gap: 8, padding: "0.75rem 1rem", borderTop: "1px solid var(--border)", alignItems: "center" }}>
                     <input
                       value={chatText}
                       onChange={e => setChatText(e.target.value)}
@@ -596,6 +593,35 @@ export default function GroupPage() {
                     />
                     <button type="submit" disabled={!chatText.trim() || chatBusy} style={{ background: "var(--accent)", color: "#fff", border: "none", borderRadius: "var(--radius)", padding: "0.5rem 1.25rem", fontWeight: 600, fontSize: 14, cursor: chatText.trim() && !chatBusy ? "pointer" : "not-allowed", opacity: chatText.trim() && !chatBusy ? 1 : 0.6 }}>
                       Send
+                    </button>
+                    {/* Video Call Icon Button (moved) */}
+                    <button
+                      type="button"
+                      onClick={() => setCallOpen(true)}
+                      style={{
+                        marginLeft: 8,
+                        background: "var(--accent)",
+                        color: "#fff",
+                        border: "none",
+                        borderRadius: "50%",
+                        width: 44,
+                        height: 44,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        boxShadow: "0 2px 8px #0001",
+                        cursor: wsConnected ? "pointer" : "not-allowed",
+                        opacity: wsConnected ? 1 : 0.6,
+                        transition: "background 0.2s"
+                      }}
+                      disabled={!wsConnected}
+                      title={wsConnected ? "Start group video call" : "Connecting..."}
+                      aria-label="Start group video call"
+                    >
+                      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
+                        <rect x="2" y="7" width="15" height="10" rx="2" fill="none"/>
+                        <polygon points="17 9 22 7 22 17 17 15" fill="none"/>
+                      </svg>
                     </button>
                   </form>
                 ) : (
