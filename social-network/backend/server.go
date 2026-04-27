@@ -48,6 +48,7 @@ func main() {
 	groupHandler := handlers.NewGroupHandler(db, hub)
 	notifHandler := handlers.NewNotificationHandler(db)
 	chatHandler := handlers.NewChatHandler(db, hub)
+	pinHandler := handlers.NewPinHandler(db)
 
 	mux := http.NewServeMux()
 
@@ -172,6 +173,18 @@ func main() {
 			chatHandler.GetGroupMessages(w, r)
 		case http.MethodPost:
 			chatHandler.SendGroupMessage(w, r)
+		}
+	}))
+
+	// Pin message endpoints
+	mux.Handle("/api/messages/pin", protected(func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPost:
+			pinHandler.PinMessage(w, r)
+		case http.MethodDelete:
+			pinHandler.UnpinMessage(w, r)
+		case http.MethodGet:
+			pinHandler.ListPinnedMessages(w, r)
 		}
 	}))
 

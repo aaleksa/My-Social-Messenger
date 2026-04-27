@@ -32,6 +32,19 @@ export default function ChatPage() {
 }
 
 function ChatPageInner() {
+      // Pinned messages state
+      const [pinnedIds, setPinnedIds] = useState<number[]>([]);
+      const [showPinned, setShowPinned] = useState(false);
+
+      // Load pinned messages when selected changes
+      useEffect(() => {
+        if (!selected) return setPinnedIds([]);
+        if (selected.type === "user") {
+          api.listPinnedMessages(selected.id, undefined).then(setPinnedIds).catch(() => setPinnedIds([]));
+        } else {
+          api.listPinnedMessages(undefined, selected.id).then(setPinnedIds).catch(() => setPinnedIds([]));
+        }
+      }, [selected]);
     // Search state
     const [search, setSearch] = useState("");
     const [searchResults, setSearchResults] = useState<Message[]|null>(null);
@@ -339,6 +352,27 @@ function ChatPageInner() {
               {selected && messages.length === 0 && (
                 <p style={{ textAlign: "center", color: "var(--text-muted)", fontSize: 13, marginTop: "2rem" }}>No messages yet. Say hi! 👋</p>
               )}
+              {/* Pinned messages bar */}
+              {selected && pinnedIds.length > 0 && (
+                <div style={{ background: '#f7f7f7', borderRadius: 8, padding: 8, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span style={{ fontWeight: 600 }}>📌 Закріплені:</span>
+                  <button style={{ fontSize: 13, border: 'none', background: 'var(--accent)', color: '#fff', borderRadius: 6, padding: '2px 10px', cursor: 'pointer' }} onClick={() => setShowPinned(v => !v)}>
+                    {showPinned ? 'Сховати' : 'Показати'}
+                  </button>
+                  <span style={{ fontSize: 13, color: '#888' }}>({pinnedIds.length})</span>
+                </div>
+              )}
+              {/* Show pinned messages if toggled */}
+              {showPinned && pinnedIds.length > 0 && (
+                <div style={{ marginBottom: 10 }}>
+                  {messages.filter(m => m.id && pinnedIds.includes(m.id)).map(m => (
+                    <div key={m.id} style={{ background: '#fffbe6', border: '1px solid #ffe58f', borderRadius: 8, padding: 8, marginBottom: 4 }}>
+                      <div style={{ fontSize: 13, color: '#b8860b', marginBottom: 2 }}>📌 {new Date(m.created_at).toLocaleString()}</div>
+                      <div style={{ whiteSpace: 'pre-line' }}>{m.content}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
               {messages.map((m, i) => {
                 const isMine = me && m.sender_id === me.id;
                 const isGroup = selected?.type === "group";
@@ -477,6 +511,26 @@ function ChatPageInner() {
                           </>
                         )}
                         <div style={{ position: "absolute", top: 2, right: 6, display: "flex", gap: 4 }}>
+                          {/* Pin/unpin button */}
+                          {selected && m.id && (
+                            pinnedIds.includes(m.id) ? (
+                              <button style={{ background: 'none', border: 'none', color: '#b8860b', cursor: 'pointer' }} title="Unpin" onClick={async () => {
+                                try {
+                                  if (selected.type === 'user') await api.unpinMessage(m.id!);
+                                  else await api.unpinMessage(m.id!, selected.id);
+                                  setPinnedIds(ids => ids.filter(id => id !== m.id));
+                                } catch (err: any) { alert(err?.message || 'Failed to unpin'); }
+                              }}>📌</button>
+                            ) : (
+                              <button style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer' }} title="Pin" onClick={async () => {
+                                try {
+                                  if (selected.type === 'user') await api.pinMessage(m.id!);
+                                  else await api.pinMessage(m.id!, selected.id);
+                                  setPinnedIds(ids => [...ids, m.id!]);
+                                } catch (err: any) { alert(err?.message || 'Failed to pin'); }
+                              }}>📌</button>
+                            )
+                          )}
                           {isMine && editingId !== m.id && (
                             <>
                               <button style={{ background: "none", border: "none", color: "#fff", cursor: "pointer" }} title="Edit" onClick={() => { setEditingId(m.id!); setEditText(m.content); }}>✏️</button>

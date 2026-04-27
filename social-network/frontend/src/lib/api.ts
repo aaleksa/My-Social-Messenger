@@ -108,6 +108,7 @@ export const api = {
   markNotificationRead: (id?: number, all?: boolean) =>
     request("/api/notifications", { method: "PUT", body: JSON.stringify(all ? { all: true } : { id }) }),
 
+
   // Chat
   getMessages: (recipientId: number) => request(`/api/messages?recipient_id=${recipientId}`),
   sendMessage: (recipientId: number, content: string) =>
@@ -115,6 +116,19 @@ export const api = {
   getGroupMessages: (groupId: number) => request(`/api/messages/group?group_id=${groupId}`),
   sendGroupMessage: (groupId: number, content: string) =>
     request("/api/messages/group", { method: "POST", body: JSON.stringify({ group_id: groupId, content }) }),
+
+  // Pinned messages
+  pinMessage: (message_id: number, group_id?: number) =>
+    request("/api/messages/pin", { method: "POST", body: JSON.stringify(group_id ? { message_id, group_id } : { message_id }) }),
+  unpinMessage: (message_id: number, group_id?: number) =>
+    request(`/api/messages/pin?message_id=${message_id}` + (group_id ? `&group_id=${group_id}` : ""), { method: "DELETE" }),
+  listPinnedMessages: (recipient_id?: number, group_id?: number) => {
+    if (group_id)
+      return request(`/api/messages/pin?group_id=${group_id}`);
+    if (recipient_id)
+      return request(`/api/messages/pin?recipient_id=${recipient_id}`);
+    return Promise.resolve([]);
+  },
 
   // Upload
   uploadImage: async (file: File): Promise<string> => {

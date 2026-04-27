@@ -1,5 +1,17 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
+import { useWebSocket } from "@/lib/useWebSocket";
+const GroupCall = dynamic(() => import("./GroupCall"), { ssr: false });
+  // Group call state
+  const [callOpen, setCallOpen] = useState(false);
+  const [callMessages, setCallMessages] = useState<any[]>([]);
+  const { send: wsSend, connected: wsConnected } = useWebSocket((msg) => {
+    // Only handle call-related messages for this group
+    if (msg.group_id === gid && msg.type.startsWith("call-")) {
+      setCallMessages((prev) => [...prev, msg]);
+    }
+  });
 import { useParams } from "next/navigation";
 import { api } from "@/lib/api";
 import { useWS } from "@/lib/WebSocketContext";
@@ -535,7 +547,17 @@ export default function GroupPage() {
 
             {/* CHAT */}
             {tab === "chat" && (
-              <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "var(--radius)", boxShadow: "var(--shadow)", display: "flex", flexDirection: "column", height: 480 }}>
+              <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "var(--radius)", boxShadow: "var(--shadow)", display: "flex", flexDirection: "column", height: 480, position: "relative" }}>
+                {/* Call button */}
+                <button
+                  onClick={() => setCallOpen(true)}
+                  style={{ position: "absolute", top: 12, right: 16, zIndex: 2, background: "var(--accent)", color: "#fff", border: "none", borderRadius: 8, padding: "0.4rem 1.1rem", fontWeight: 600, fontSize: 15, cursor: "pointer", boxShadow: "0 2px 8px #0001" }}
+                  disabled={!wsConnected}
+                  title={wsConnected ? "Start group call" : "Connecting..."}
+                >
+                  📞 Call
+                </button>
+                {/* Chat messages */}
                 <div style={{ flex: 1, overflowY: "auto", padding: "1rem", display: "flex", flexDirection: "column", gap: 10 }}>
                   {chatMessages.length === 0 && (
                     <div style={{ textAlign: "center", color: "var(--text-muted)", padding: "3rem", fontSize: 14 }}>
@@ -578,6 +600,19 @@ export default function GroupPage() {
                   </form>
                 ) : (
                   <div style={{ padding: "0.75rem 1rem", borderTop: "1px solid var(--border)", textAlign: "center", fontSize: 13, color: "var(--text-muted)" }}>Join the group to send messages</div>
+                )}
+                {/* Group Call Modal */}
+                {callOpen && (
+                  <GroupCall
+                    groupId={gid}
+                    meId={me?.id}
+                    wsSend={wsSend}
+                    wsMessages={callMessages}
+                    onClose={() => {
+                      setCallOpen(false);
+                      setCallMessages([]);
+                    }}
+                  />
                 )}
               </div>
             )}
