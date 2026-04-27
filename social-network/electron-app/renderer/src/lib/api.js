@@ -1,3 +1,48 @@
+
+// Add reaction to a message
+export async function apiReactMessage(tok, message_id, emoji) {
+  return apiFetch(tok, '/api/messages/react', { method: 'POST', body: JSON.stringify({ message_id, emoji }) })
+}
+// Remove reaction from a message
+export async function apiUnreactMessage(tok, message_id, emoji) {
+  return apiFetch(tok, '/api/messages/react', { method: 'DELETE', body: JSON.stringify({ message_id, emoji }) })
+}
+// Add reaction to a group message
+export async function apiReactGroupMessage(tok, group_message_id, emoji) {
+  return apiFetch(tok, '/api/messages/group/react', { method: 'POST', body: JSON.stringify({ group_message_id, emoji }) })
+}
+// Remove reaction from a group message
+export async function apiUnreactGroupMessage(tok, group_message_id, emoji) {
+  return apiFetch(tok, '/api/messages/group/react', { method: 'DELETE', body: JSON.stringify({ group_message_id, emoji }) })
+}
+// Get reactions for a message
+export async function apiGetMessageReactions(tok, message_id) {
+  return apiFetch(tok, `/api/messages/reactions?message_id=${message_id}`)
+}
+// Get reactions for a group message
+export async function apiGetGroupMessageReactions(tok, group_message_id) {
+  return apiFetch(tok, `/api/messages/group/reactions?group_message_id=${group_message_id}`)
+}
+
+// Edit a personal message
+export async function apiEditMessage(tok, id, data) {
+  return apiFetch(tok, `/api/messages/edit?id=${id}`, { method: 'PUT', body: JSON.stringify(data) })
+}
+
+// Delete a personal message
+export async function apiDeleteMessage(tok, id) {
+  return apiFetch(tok, `/api/messages/edit?id=${id}`, { method: 'DELETE' })
+}
+
+// Edit a group message
+export async function apiEditGroupMessage(tok, id, data) {
+  return apiFetch(tok, `/api/messages/group/edit?id=${id}`, { method: 'PUT', body: JSON.stringify(data) })
+}
+
+// Delete a group message
+export async function apiDeleteGroupMessage(tok, id) {
+  return apiFetch(tok, `/api/messages/group/edit?id=${id}`, { method: 'DELETE' })
+}
 export const API    = 'http://localhost:8080'
 export const WS_URL = 'ws://localhost:8080/api/ws'
 
