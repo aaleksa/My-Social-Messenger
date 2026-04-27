@@ -32,23 +32,25 @@ export default function ChatPage() {
 }
 
 function ChatPageInner() {
-      // Pinned messages state
-      const [pinnedIds, setPinnedIds] = useState<number[]>([]);
-      const [showPinned, setShowPinned] = useState(false);
+  // ...existing state...
+  const [selected, setSelected] = useState<Contact | null>(null);
+  // Pinned messages state
+  const [pinnedIds, setPinnedIds] = useState<number[]>([]);
+  const [showPinned, setShowPinned] = useState(false);
 
-      // Load pinned messages when selected changes
-      useEffect(() => {
-        if (!selected) return setPinnedIds([]);
-        if (selected.type === "user") {
-          api.listPinnedMessages(selected.id, undefined).then(setPinnedIds).catch(() => setPinnedIds([]));
-        } else {
-          api.listPinnedMessages(undefined, selected.id).then(setPinnedIds).catch(() => setPinnedIds([]));
-        }
-      }, [selected]);
-    // Search state
-    const [search, setSearch] = useState("");
-    const [searchResults, setSearchResults] = useState<Message[]|null>(null);
-    const [searching, setSearching] = useState(false);
+  // Load pinned messages when selected changes
+  useEffect(() => {
+    if (!selected) return setPinnedIds([]);
+    if (selected.type === "user") {
+      api.listPinnedMessages(selected.id, undefined).then(setPinnedIds).catch(() => setPinnedIds([]));
+    } else {
+      api.listPinnedMessages(undefined, selected.id).then(setPinnedIds).catch(() => setPinnedIds([]));
+    }
+  }, [selected]);
+  // Search state
+  const [search, setSearch] = useState("");
+  const [searchResults, setSearchResults] = useState<Message[]|null>(null);
+  const [searching, setSearching] = useState(false);
 
     // Search handler
     async function handleSearch(e: React.FormEvent) {
