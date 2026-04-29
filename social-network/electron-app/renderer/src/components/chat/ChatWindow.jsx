@@ -229,20 +229,36 @@ export default function ChatWindow() {
   }
 
   async function handleFileUpload(file) {
-    if (!file) return
-    if (!online) { setSendErr(OFFLINE_MSG); return }
-    setUploading(true)
+    if (!file) return;
+    if (!online) { setSendErr(OFFLINE_MSG); return; }
+    // Validate file type/size (max 20MB)
+    const allowedTypes = [
+      'image/jpeg','image/png','image/gif','image/webp','image/bmp','image/svg+xml',
+      'application/pdf','application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'video/mp4','audio/mpeg','audio/ogg','audio/wav','audio/mp3','audio/webm','video/webm','video/ogg'
+    ];
+    if (!allowedTypes.includes(file.type)) {
+      setSendErr('Unsupported file type.');
+      return;
+    }
+    if (file.size > 20 * 1024 * 1024) {
+      setSendErr('File too large (max 20MB).');
+      return;
+    }
+    setUploading(true);
     try {
-      const fd = new FormData()
-      fd.append('file', file)
-      const res = await apiForm(tok, '/api/upload', fd)
-      const fileURL = res?.url || ''
-      if (fileURL) send('', fileURL)
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await apiForm(tok, '/api/upload', fd);
+      const fileURL = res?.url || '';
+      const fileType = res?.type || file.type;
+      const fileName = res?.name || file.name;
+      if (fileURL) send('', `${fileURL}|${fileType}|${fileName}`);
     } catch (_) {
-      setSendErr('File upload failed.')
+      setSendErr('File upload failed.');
     } finally {
-      setUploading(false)
-      if (fileRef.current) fileRef.current.value = ''
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = '';
     }
   }
 
@@ -324,22 +340,34 @@ export default function ChatWindow() {
                         <b>{repliedMsg.sender_id === me?.id ? 'You' : dname(users.find(u => u.id === repliedMsg.sender_id) || { name: 'User' })}</b>: {repliedMsg.content ? repliedMsg.content.slice(0, 80) : '[file]'}
                       </div>
                     )}
-                    {m.content && <div className="mb">{m.content}</div>}
-                    {m.image_url && (
-                      m.image_url.match(/\.(jpg|jpeg|png|gif|bmp|webp)$/i)
-                        ? <img
-                            src={m.image_url.startsWith('http') ? m.image_url : API + m.image_url}
-                            alt="img"
-                            style={{ maxWidth: 220, maxHeight: 220, borderRadius: 8, display: 'block', marginTop: m.content ? 4 : 0, cursor: 'pointer' }}
-                            onClick={() => window.open(m.image_url.startsWith('http') ? m.image_url : API + m.image_url, '_blank')}
-                          />
-                        : <a
-                            href={m.image_url.startsWith('http') ? m.image_url : API + m.image_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{ display: 'inline-block', marginTop: m.content ? 4 : 0 }}
-                          >📎 Download file</a>
-                    )}
+                    {/* Render message content and file preview */}
+                    {(() => {
+                      const parts = (m.content || '').split(/\n/);
+                      return parts.map((part, idx) => {
+                        // Detect file meta: url|type|name
+                        const fileMatch = part.match(/^(\/uploads\/[^|]+)\|([^|]+)\|(.+)$/);
+                        if (fileMatch) {
+                          const [_, url, type, name] = fileMatch;
+                          if (type.startsWith('image/')) {
+                            return <img key={idx} src={API + url} alt={name} style={{ maxWidth: 180, maxHeight: 180, borderRadius: 8, margin: '4px 0' }} />;
+                          } else if (type.startsWith('audio/')) {
+                            return <audio key={idx} src={API + url} controls style={{ display: 'block', margin: '6px 0', maxWidth: 220 }} />;
+                          } else if (type.startsWith('video/')) {
+                            return <video key={idx} src={API + url} controls style={{ display: 'block', margin: '6px 0', maxWidth: 220 }} />;
+                          } else {
+                            return <a key={idx} href={API + url} download={name} style={{ color: mine ? '#fff' : 'var(--accent)', wordBreak: 'break-all' }}>📎 {name}</a>;
+                          }
+                        } else if (/^https?:\/\/.+\.(jpg|jpeg|png|gif|webp)$/i.test(part.trim())) {
+                          return <img key={idx} src={part.trim()} alt="file" style={{ maxWidth: 180, maxHeight: 180, borderRadius: 8, margin: '4px 0' }} />;
+                        } else if (/^https?:\/\//.test(part.trim())) {
+                          return <a key={idx} href={part.trim()} target="_blank" rel="noopener noreferrer" style={{ color: mine ? '#fff' : 'var(--accent)', wordBreak: 'break-all' }}>{part.trim()}</a>;
+                        } else if (part.trim().length > 0) {
+                          return <span key={idx}>{part}</span>;
+                        } else {
+                          return <br key={idx} />;
+                        }
+                      });
+                    })()}
                     <div style={{ display: 'flex', gap: 4, marginTop: 4, flexWrap: 'wrap' }}>
                       {Object.entries(reactCounts).map(([emoji, count]) => (
                         <button

@@ -104,9 +104,9 @@ export const api = {
   },
 
   // Upload
-  uploadImage: async (file: File): Promise<string> => {
+  uploadFile: async (file: File): Promise<{ url: string; type: string; name: string }> => {
     const formData = new FormData();
-    formData.append("image", file);
+    formData.append("file", file);
     const res = await fetch("/api/upload", {
       method: "POST",
       credentials: "include",
@@ -114,6 +114,6 @@ export const api = {
     });
     if (!res.ok) throw new Error(await res.text());
     const data = await res.json();
-    return data.url as string;
+    return { url: data.url, type: data.type, name: data.name };
   },
 };

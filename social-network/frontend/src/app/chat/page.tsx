@@ -84,6 +84,10 @@ function ChatPageInner() {
   const [text, setText] = useState("");
   const [showEmoji, setShowEmoji] = useState(false);
   const [file, setFile] = useState<File | null>(null);
+  const [fileMeta, setFileMeta] = useState<{type: string, name: string} | null>(null);
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [recording, setRecording] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [editingId, setEditingId] = useState<number|null>(null);
   const [editText, setEditText] = useState("");
@@ -201,38 +205,65 @@ function ChatPageInner() {
 
   async function send(e: React.FormEvent) {
     e.preventDefault();
-    if ((!text.trim() && !file) || !selected) return;
+    if ((!text.trim() && !file && !audioBlob) || !selected) return;
     const content = text.trim();
     setShowEmoji(false);
     let fileUrl: string | null = null;
+    let fileType: string | null = null;
+    let fileName: string | null = null;
     if (file) {
       setUploading(true);
       try {
-        fileUrl = await api.uploadImage(file);
+        const { url, type, name } = await api.uploadFile(file);
+        fileUrl = url;
+        fileType = type;
+        fileName = name;
+        setFileMeta({ type, name });
       } catch (err: any) {
         alert(err?.message || "File upload failed");
         setUploading(false);
         return;
       }
       setUploading(false);
+    } else if (audioBlob) {
+      setUploading(true);
+      try {
+        const audioFile = new File([audioBlob], `voice-${Date.now()}.ogg`, { type: 'audio/ogg' });
+        const { url, type, name } = await api.uploadFile(audioFile);
+        fileUrl = url;
+        fileType = type;
+        fileName = name;
+        setFileMeta({ type, name });
+      } catch (err: any) {
+        alert(err?.message || "Audio upload failed");
+        setUploading(false);
+        return;
+      }
+      setUploading(false);
+      setAudioBlob(null);
     }
     setText("");
     setFile(null);
+    setFileMeta(null);
     try {
+      let msgContent = content;
+      if (fileUrl) {
+        msgContent += (msgContent ? "\n" : "") + fileUrl + (fileType ? `|${fileType}|${fileName}` : "");
+      }
       if (selected.type === "user") {
-        await api.sendMessage(selected.id, fileUrl ? `${content}\n${fileUrl}` : content);
+        await api.sendMessage(selected.id, msgContent);
         setMessages(prev => [...prev, {
           sender_id: me?.id,
           recipient_id: selected.id,
-          content: fileUrl ? `${content}\n${fileUrl}` : content,
+          content: msgContent,
           created_at: new Date().toISOString(),
         }]);
       } else {
-        await api.sendGroupMessage(selected.id, fileUrl ? `${content}\n${fileUrl}` : content);
+        await api.sendGroupMessage(selected.id, msgContent);
         setMessages(prev => [...prev, {
           sender_id: me?.id,
           group_id: selected.id,
-          content: fileUrl ? `${content}\n${fileUrl}` : content,
+          content: msgContent,
           created_at: new Date().toISOString(),
         }]);
       }
@@ -425,7 +456,20 @@ function ChatPageInner() {
                               // Render file links/images if present
                               const parts = (m.content || "").split(/\n/);
                               return parts.map((part, idx) => {
-                                if (/^https?:\/\/.+\.(jpg|jpeg|png|gif|webp)$/i.test(part.trim())) {
+                                // Detect file meta: url|type|name
+                                const fileMatch = part.match(/^(\/uploads\/[^|]+)\|([^|]+)\|(.+)$/);
+                                if (fileMatch) {
+                                  const [_, url, type, name] = fileMatch;
+                                  if (type.startsWith('image/')) {
+                                    return <img key={idx} src={url} alt={name} style={{ maxWidth: 180, maxHeight: 180, borderRadius: 8, margin: "4px 0" }} />;
+                                  } else if (type.startsWith('audio/')) {
+                                    return <audio key={idx} src={url} controls style={{ display: 'block', margin: '6px 0', maxWidth: 220 }} />;
+                                  } else if (type.startsWith('video/')) {
+                                    return <video key={idx} src={url} controls style={{ display: 'block', margin: '6px 0', maxWidth: 220 }} />;
+                                  } else {
+                                    return <a key={idx} href={url} download={name} style={{ color: isMine ? "#fff" : "var(--accent)", wordBreak: "break-all" }}>📎 {name}</a>;
+                                  }
+                                } else if (/^https?:\/\/.+\.(jpg|jpeg|png|gif|webp)$/i.test(part.trim())) {
                                   return <img key={idx} src={part.trim()} alt="file" style={{ maxWidth: 180, maxHeight: 180, borderRadius: 8, margin: "4px 0" }} />;
                                 } else if (/^https?:\/\//.test(part.trim())) {
                                   return <a key={idx} href={part.trim()} target="_blank" rel="noopener noreferrer" style={{ color: isMine ? "#fff" : "var(--accent)", wordBreak: "break-all" }}>{part.trim()}</a>;
@@ -609,7 +653,7 @@ function ChatPageInner() {
             )}
 
             {/* Input */}
-            <form onSubmit={send} style={{ padding: "0.75rem 1rem", borderTop: "1px solid var(--border)", display: "flex", gap: "0.5rem", alignItems: "center", background: "var(--bg-card)" }}>
+            <form onSubmit={send} style={{ padding: "0.75rem 1rem", borderTop: "1px solid var(--border)", display: "flex", gap: "0.5rem", alignItems: "center", background: "var(--bg-card)", position: 'relative' }}>
               <button type="button" onClick={() => setShowEmoji(s => !s)}
                 title="Emoji"
                 style={{ background: "none", border: "none", fontSize: 22, cursor: selected ? "pointer" : "not-allowed", opacity: selected ? 1 : 0.4, flexShrink: 0 }}>
@@ -631,28 +675,115 @@ function ChatPageInner() {
                 }}
                 onFocus={e => { if (selected) e.currentTarget.style.borderColor = "var(--accent)"; }}
                 onBlur={e => (e.currentTarget.style.borderColor = "var(--border)")}
+                onDrop={e => {
+                  e.preventDefault();
+                  if (!selected || uploading) return;
+                  const f = e.dataTransfer.files?.[0];
+                  if (!f) return;
+                  // Validate type and size
+                  const allowed = [
+                    'image/jpeg','image/png','image/gif','image/webp',
+                    'application/pdf','application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    'video/mp4','video/quicktime','video/x-msvideo',
+                    'audio/mpeg','audio/wav','audio/ogg','audio/webm'
+                  ];
+                  if (!allowed.includes(f.type)) {
+                    alert('Недозволений тип файлу');
+                    return;
+                  }
+                  if (f.size > 20 * 1024 * 1024) {
+                    alert('Файл занадто великий (макс. 20MB)');
+                    return;
+                  }
+                  setFile(f);
+                  setFileMeta({ type: f.type, name: f.name });
+                }}
+                onDragOver={e => e.preventDefault()}
               />
               <input
+                ref={fileInputRef}
                 type="file"
                 disabled={!selected || uploading}
-                onChange={e => setFile(e.target.files?.[0] || null)}
+                onChange={e => {
+                  const f = e.target.files?.[0] || null;
+                  if (!f) return setFile(null);
+                  // Validate type and size
+                  const allowed = [
+                    'image/jpeg','image/png','image/gif','image/webp',
+                    'application/pdf','application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    'video/mp4','video/quicktime','video/x-msvideo',
+                    'audio/mpeg','audio/wav','audio/ogg','audio/webm'
+                  ];
+                  if (!allowed.includes(f.type)) {
+                    alert('Недозволений тип файлу');
+                    return;
+                  }
+                  if (f.size > 20 * 1024 * 1024) {
+                    alert('Файл занадто великий (макс. 20MB)');
+                    return;
+                  }
+                  setFile(f);
+                  setFileMeta({ type: f.type, name: f.name });
+                }}
                 style={{ flexShrink: 0 }}
+                onClick={e => { (e.target as HTMLInputElement).value = ''; }}
               />
               {file && (
                 <span style={{ fontSize: 12, marginLeft: 4 }}>
-                  {file.name} <button type="button" onClick={() => setFile(null)} style={{ marginLeft: 2 }}>x</button>
+                  {file.name} <button type="button" onClick={() => { setFile(null); setFileMeta(null); }} style={{ marginLeft: 2 }}>x</button>
+                </span>
+              )}
+              {/* Voice recording button */}
+              <button
+                type="button"
+                disabled={!selected || uploading}
+                title={recording ? "Зупинити запис" : "Записати голосове"}
+                style={{ background: recording ? 'var(--accent)' : 'var(--border)', color: '#fff', border: 'none', borderRadius: '50%', width: 40, height: 40, fontSize: 18, marginLeft: 4, cursor: !selected || uploading ? 'not-allowed' : 'pointer' }}
+                onClick={async () => {
+                  if (recording) {
+                    // Stop recording
+                    (window as any)._recorder?.stop();
+                    setRecording(false);
+                  } else {
+                    // Start recording
+                    if (!navigator.mediaDevices?.getUserMedia) {
+                      alert('Браузер не підтримує запис аудіо');
+                      return;
+                    }
+                    try {
+                      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                      const chunks: Blob[] = [];
+                      const recorder = new (window as any).MediaRecorder(stream, { mimeType: 'audio/ogg' });
+                      (window as any)._recorder = recorder;
+                      recorder.ondataavailable = (e: any) => { if (e.data.size > 0) chunks.push(e.data); };
+                      recorder.onstop = () => {
+                        setAudioBlob(new Blob(chunks, { type: 'audio/ogg' }));
+                        stream.getTracks().forEach((t: any) => t.stop());
+                        (window as any)._recorder = null;
+                      };
+                      recorder.start();
+                      setRecording(true);
+                    } catch {
+                      alert('Не вдалося отримати доступ до мікрофона');
+                    }
+                  }
+                }}
+              >{recording ? '■' : '🎤'}</button>
+              {audioBlob && (
+                <span style={{ fontSize: 12, marginLeft: 4 }}>
+                  Голосове повідомлення готове <button type="button" onClick={() => setAudioBlob(null)} style={{ marginLeft: 2 }}>x</button>
                 </span>
               )}
               <button
                 type="submit"
-                disabled={(!text.trim() && !file) || !selected || uploading}
+                disabled={(!text.trim() && !file && !audioBlob) || !selected || uploading}
                 title="Send"
                 style={{
-                  background: ((text.trim() || file) && selected && !uploading) ? "var(--accent)" : "var(--border)",
+                  background: ((text.trim() || file || audioBlob) && selected && !uploading) ? "var(--accent)" : "var(--border)",
                   color: "#fff", border: "none", borderRadius: "50%",
                   width: 40, height: 40, fontSize: 18,
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  cursor: ((text.trim() || file) && selected && !uploading) ? "pointer" : "not-allowed",
+                  cursor: ((text.trim() || file || audioBlob) && selected && !uploading) ? "pointer" : "not-allowed",
                   flexShrink: 0, transition: "background .15s",
                 }}
               >{uploading ? "…" : "➤"}</button>

@@ -585,6 +585,50 @@ export default function GroupPage() {
                 </div>
                 {isMember ? (
                   <form onSubmit={sendChatMessage} style={{ display: "flex", gap: 8, padding: "0.75rem 1rem", borderTop: "1px solid var(--border)", alignItems: "center" }}>
+                    {/* Emoji icon button */}
+                    <button
+                      type="button"
+                      onClick={() => {/* TODO: open emoji picker */}}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        borderRadius: "50%",
+                        width: 38,
+                        height: 38,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: 22,
+                        color: "var(--accent)",
+                        cursor: "pointer",
+                        marginRight: 2
+                      }}
+                      title="Add emoji"
+                      aria-label="Add emoji"
+                    >
+                      <span role="img" aria-label="emoji">😊</span>
+                    </button>
+                    {/* File attachment icon button */}
+                    <label style={{
+                        background: "none",
+                        border: "none",
+                        borderRadius: "50%",
+                        width: 38,
+                        height: 38,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: 22,
+                        color: "var(--accent)",
+                        cursor: "pointer",
+                        marginRight: 2
+                      }}
+                      title="Attach file"
+                      aria-label="Attach file"
+                    >
+                      <input type="file" style={{ display: "none" }} onChange={() => {/* TODO: handle file upload */}} />
+                      <span role="img" aria-label="attach file">📎</span>
+                    </label>
                     <input
                       value={chatText}
                       onChange={e => setChatText(e.target.value)}
