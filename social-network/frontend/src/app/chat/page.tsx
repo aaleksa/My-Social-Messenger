@@ -12,6 +12,8 @@ type Message = {
   group_id?: number;
   content: string;
   created_at: string;
+  is_edited?: boolean;
+  deleted?: boolean;
 };
 type Contact = { id: number; type: "user" | "group"; name: string };
 type GroupMember = { user_id: number; first_name: string; last_name: string; avatar: string };
@@ -105,84 +107,95 @@ function ChatPageInner() {
         setMe(u);
         const [allUsers, groups] = await Promise.all([
           api.listUsers().catch(() => []),
-          api.listGroups().catch(() => []),
-        ]);
-        const userContacts: Contact[] = (Array.isArray(allUsers) ? allUsers : [])
-          .filter((user: any) => user.follow_status === "accepted" || user.following_me_status === "accepted")
-          .map((user: any) => ({
-            id: user.id,
-            type: "user" as const,
-            name: `${user.first_name} ${user.last_name}`.trim() || `User #${user.id}`,
-          }));
-        const groupContacts: Contact[] = (Array.isArray(groups) ? groups : [])
-          .filter((g: any) => g.my_status === "accepted")
-          .map((g: any) => ({ id: g.id, type: "group" as const, name: g.title || `Group #${g.id}` }));
-        setContacts([...userContacts, ...groupContacts]);
-        // auto-select contact from URL param
-        if (preselectedUserId) {
-          const target = userContacts.find(c => c.id === preselectedUserId);
-          if (target) setSelected(target);
-          else {
-            // user not in contacts yet — add them and select
-            const u = (Array.isArray(allUsers) ? allUsers : []).find((x: any) => x.id === preselectedUserId);
-            if (u) {
-              const c: Contact = { id: u.id, type: "user", name: `${u.first_name} ${u.last_name}`.trim() || `User #${u.id}` };
-              setContacts(prev => [c, ...prev]);
-              setSelected(c);
-            }
-          }
-        }
-      })
-      .catch(() => {});
-  }, []);
-
-  // Reload messages and reactions when contact changes
-  useEffect(() => {
-    if (pollRef.current) clearInterval(pollRef.current);
-    if (!selected) return;
-    // Fetch group members for sender name display
-    if (selected.type === "group") {
-      api.listGroupMembers(selected.id).then((members: GroupMember[]) => {
-        const map: Record<number, GroupMember> = {};
-        (members || []).forEach((m: GroupMember) => { map[m.user_id] = m; });
-        setGroupMembers(map);
-      }).catch(() => {});
-    } else {
-      setGroupMembers({});
-    }
-    const load = async () => {
-      let msgs = [];
-      if (selected.type === "user") {
-        msgs = await api.getMessages(selected.id).catch(() => []);
-      } else {
-        msgs = await api.getGroupMessages(selected.id).catch(() => []);
-      }
-      setMessages(Array.isArray(msgs) ? msgs : []);
-      // Fetch reactions for all messages
-      const reactMap: Record<number, { [emoji: string]: number; mine: string[] }> = {};
-      for (const m of msgs) {
-        if (!m.id) continue;
-        let r: any = {};
-        try {
-          if (selected.type === "user") {
-            r = await api.request(`/api/messages/${m.id}/reactions`);
-          } else {
-            r = await api.request(`/api/messages/group/${m.id}/reactions`);
-          }
-        } catch {}
-        reactMap[m.id] = { ...r.counts, mine: r.mine || [] };
-      }
-      setReactions(reactMap);
-    };
-    load();
-    pollRef.current = setInterval(load, 3000);
-    return () => { if (pollRef.current) clearInterval(pollRef.current); };
-  }, [selected]);
-
-  // Handle incoming WebSocket messages — only for non-group (DM) chats
-  // Group chats are handled by polling to avoid duplicates
-  useEffect(() => {
-    if (!lastMessage) return;
+              {messages.map((m, i) => {
+                const isMine = me && m.sender_id === me.id;
+                const isGroup = selected?.type === "group";
+                const sender = isGroup && !isMine ? groupMembers[m.sender_id] : null;
+                return (
+                  <div key={m.id ?? i} style={{ display: "flex", flexDirection: isMine ? "row-reverse" : "row", alignItems: "flex-end", gap: 8, position: "relative" }}>
+                    {isGroup && !isMine && (
+                      <div style={{ width: 30, height: 30, borderRadius: "50%", background: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 700, fontSize: 13, flexShrink: 0 }}>
+                        {sender ? (sender.first_name[0] || "?").toUpperCase() : "?"}
+                      </div>
+                    )}
+                    <div style={{ maxWidth: "65%" }}>
+                      {isGroup && !isMine && sender && (
+                        <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 2, color: "var(--text-muted)", paddingLeft: 4 }}>
+                          {sender.first_name} {sender.last_name}
+                        </div>
+                      )}
+                      <div style={{
+                        padding: "0.55rem 0.9rem",
+                        borderRadius: isMine ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
+                        background: isMine ? "var(--accent)" : "var(--bg-input)",
+                        color: isMine ? "#fff" : "var(--text)",
+                        fontSize: 14, lineHeight: 1.45, wordBreak: "break-word",
+                        position: "relative"
+                      }}>
+                        {editingId === m.id ? (
+                          <form onSubmit={async e => {
+                            e.preventDefault();
+                            if (!editText.trim()) return;
+                            try {
+                              if (isGroup) {
+                                await api.editGroupMessage(m.id!, editText);
+                              } else {
+                                await api.editMessage(m.id!, editText);
+                              }
+                              setMessages(msgs => msgs.map(msg => msg.id === m.id ? { ...msg, content: editText } : msg));
+                              setEditingId(null);
+                            } catch (err: any) {
+                              alert(err?.message || "Failed to edit message");
+                            }
+                          }} style={{ display: "flex", gap: 4 }}>
+                            <input value={editText} onChange={e => setEditText(e.target.value)} style={{ flex: 1, borderRadius: 6, border: "1px solid #ccc", padding: "2px 6px" }} autoFocus />
+                            <button type="submit">💾</button>
+                            <button type="button" onClick={() => setEditingId(null)}>✖</button>
+                          </form>
+                        ) : (
+                          <>
+                            {/* Deleted message stub */}
+                            {(m.deleted || m.content === "Повідомлення видалене" || m.content === "Message deleted") ? (
+                              <span style={{ color: '#888', fontStyle: 'italic' }}>Message deleted</span>
+                            ) : (
+                              <>
+                                {(() => {
+                                  // Render file links/images if present
+                                  const parts = (m.content || "").split(/\n/);
+                                  return parts.map((part, idx) => {
+                                    // Detect file meta: url|type|name
+                                    const fileMatch = part.match(/^(\/uploads\/[^|]+)\|([^|]+)\|(.+)$/);
+                                    if (fileMatch) {
+                                      const [_, url, type, name] = fileMatch;
+                                      if (type.startsWith('image/')) {
+                                        return <img key={idx} src={url} alt={name} style={{ maxWidth: 180, maxHeight: 180, borderRadius: 8, margin: "4px 0" }} />;
+                                      } else if (type.startsWith('audio/')) {
+                                        return <audio key={idx} src={url} controls style={{ display: 'block', margin: '6px 0', maxWidth: 220 }} />;
+                                      } else if (type.startsWith('video/')) {
+                                        return <video key={idx} src={url} controls style={{ display: 'block', margin: '6px 0', maxWidth: 220 }} />;
+                                      } else {
+                                        return <a key={idx} href={url} download={name} style={{ color: isMine ? "#fff" : "var(--accent)", wordBreak: "break-all" }}>📎 {name}</a>;
+                                      }
+                                    } else if (/^https?:\/\/.+\.(jpg|jpeg|png|gif|webp)$/i.test(part.trim())) {
+                                      return <img key={idx} src={part.trim()} alt="file" style={{ maxWidth: 180, maxHeight: 180, borderRadius: 8, margin: "4px 0" }} />;
+                                    } else if (/^https?:\/.*/.test(part.trim())) {
+                                      return <a key={idx} href={part.trim()} target="_blank" rel="noopener noreferrer" style={{ color: isMine ? "#fff" : "var(--accent)", wordBreak: "break-all" }}>{part.trim()}</a>;
+                                    } else if (part.trim().length > 0) {
+                                      return <span key={idx}>{part}</span>;
+                                    } else {
+                                      return <br key={idx} />;
+                                    }
+                                  });
+                                })()}
+                                {/* Edited label */}
+                                {m.is_edited && !m.deleted && m.content !== "Повідомлення видалене" && m.content !== "Message deleted" && (
+                                  <span style={{ fontSize: 11, color: '#aaa', marginLeft: 6 }}>(edited)</span>
+                                )}
+                              </>
+                            )}
+                            <div style={{ fontSize: 10, opacity: .65, marginTop: "0.2rem", textAlign: isMine ? "right" : "left" }}>
+                              {new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                            </div>
     const sel = selectedRef.current;
     if (!sel) return;
     if (
@@ -349,22 +362,22 @@ function ChatPageInner() {
                             type="text"
                             value={search}
                             onChange={e => setSearch(e.target.value)}
-                            placeholder={selected ? "Пошук по чату..." : "Оберіть чат для пошуку"}
+                            placeholder={selected ? "Search in chat..." : "Select a chat to search"}
                             disabled={!selected}
                             style={{ flex: 1, borderRadius: 8, border: "1px solid #ccc", padding: "6px 12px", fontSize: 15 }}
                           />
                           <button type="submit" disabled={!search.trim() || !selected || searching} style={{ borderRadius: 8, padding: "6px 18px", background: "var(--accent)", color: "#fff", border: "none", fontWeight: 600 }}>
-                            {searching ? "..." : "Пошук"}
+                            {searching ? "..." : "Search"}
                           </button>
                           {searchResults && (
-                            <button type="button" onClick={() => setSearchResults(null)} style={{ marginLeft: 8, border: "none", background: "#eee", borderRadius: 8, padding: "6px 12px" }}>Очистити</button>
+                            <button type="button" onClick={() => setSearchResults(null)} style={{ marginLeft: 8, border: "none", background: "#eee", borderRadius: 8, padding: "6px 12px" }}>Clear</button>
                           )}
                         </form>
                         {searchResults && (
                           <div style={{ marginBottom: 16 }}>
-                            <div style={{ fontWeight: 600, marginBottom: 6 }}>Результати пошуку ({searchResults.length}):</div>
+                            <div style={{ fontWeight: 600, marginBottom: 6 }}>Search results ({searchResults.length}):</div>
                             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                              {searchResults.length === 0 && <div style={{ color: "#888" }}>Нічого не знайдено</div>}
+                              {searchResults.length === 0 && <div style={{ color: "#888" }}>Nothing found</div>}
                               {searchResults.map((m, i) => (
                                 <div key={m.id ?? i} style={{ background: "#f7f7f7", borderRadius: 8, padding: 10, fontSize: 15 }}>
                                   <div style={{ marginBottom: 2, color: "#555" }}>{new Date(m.created_at).toLocaleString()}</div>
@@ -387,9 +400,9 @@ function ChatPageInner() {
               {/* Pinned messages bar */}
               {selected && pinnedIds.length > 0 && (
                 <div style={{ background: '#f7f7f7', borderRadius: 8, padding: 8, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <span style={{ fontWeight: 600 }}>📌 Закріплені:</span>
+                  <span style={{ fontWeight: 600 }}>📌 Pinned:</span>
                   <button style={{ fontSize: 13, border: 'none', background: 'var(--accent)', color: '#fff', borderRadius: 6, padding: '2px 10px', cursor: 'pointer' }} onClick={() => setShowPinned(v => !v)}>
-                    {showPinned ? 'Сховати' : 'Показати'}
+                    {showPinned ? 'Hide' : 'Show'}
                   </button>
                   <span style={{ fontSize: 13, color: '#888' }}>({pinnedIds.length})</span>
                 </div>

@@ -58,10 +58,16 @@ A full-stack social network application with real-time chat, groups, events, and
 - **Posts & Comments** — create / delete posts (with image upload), like / unlike posts, add comments, control visibility (public / followers / selected users)
 - **Groups** — create groups, invite members, request to join, manage membership
 - **Events** — create events inside groups, RSVP (going / not going)
-- **Real-time Chat** — private direct messages and group chat via WebSocket; supports image attachments
+- **Real-time Chat** — private direct messages and group chat via WebSocket; supports:
+  - sending files (documents, images, video, audio, voice messages) with drag-n-drop, file type/size validation, and in-chat previews (images, audio, video, documents)
+  - editing and deleting messages (author only):
+    - if a message is not viewed, it can be deleted without a trace
+    - if a message is viewed, it is replaced with a placeholder ("Message deleted")
+    - edited messages are marked as "edited"
+    - all edit/delete actions are available only to the author
 - **Notifications** — follow requests, group invitations, event updates — all delivered in real time
 - **Online Presence** — see which users are currently online (with client type: web / desktop)
-- **Image Uploads** — upload and serve profile avatars, post images, and chat images
+- **File & Image Uploads** — upload and serve profile avatars, post images, and chat files (documents, images, video, audio, voice messages)
 - **Desktop App** — Electron wrapper (React + Vite renderer) for macOS, Windows, and Linux
 
 ---

@@ -11,6 +11,9 @@ type Message struct {
 	ReplyTo     *int64    `json:"reply_to,omitempty"`
 	QuotedText  string    `json:"quoted_text,omitempty"`
 	CreatedAt   time.Time `json:"created_at"`
+	EditedAt    *time.Time `json:"edited_at,omitempty"`
+	Deleted     bool      `json:"deleted"`
+	Viewed      bool      `json:"viewed"`
 }
 
 type GroupMessage struct {
@@ -22,4 +25,7 @@ type GroupMessage struct {
 	ReplyTo   *int64    `json:"reply_to,omitempty"`
 	QuotedText string   `json:"quoted_text,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
+	EditedAt  *time.Time `json:"edited_at,omitempty"`
+	Deleted   bool      `json:"deleted"`
+	Viewed    bool      `json:"viewed"`
 }

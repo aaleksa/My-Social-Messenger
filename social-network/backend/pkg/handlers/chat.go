@@ -14,71 +14,71 @@ import (
 )
 
 type ChatHandler struct {
-       DB  *sqlite.DB
-       Hub *ws.Hub
+	DB  *sqlite.DB
+	Hub *ws.Hub
 }
 
 // ...existing methods...
 
 // GET /api/messages/search?recipient_id=X&query=Y
 func (h *ChatHandler) SearchMessages(w http.ResponseWriter, r *http.Request) {
-       senderID := middleware.GetUserID(r)
-       recipientIDStr := r.URL.Query().Get("recipient_id")
-       groupIDStr := r.URL.Query().Get("group_id")
-       query := r.URL.Query().Get("query")
-       if query == "" {
-	       http.Error(w, "query required", http.StatusBadRequest)
-	       return
-       }
+	senderID := middleware.GetUserID(r)
+	recipientIDStr := r.URL.Query().Get("recipient_id")
+	groupIDStr := r.URL.Query().Get("group_id")
+	query := r.URL.Query().Get("query")
+	if query == "" {
+		http.Error(w, "query required", http.StatusBadRequest)
+		return
+	}
 	var rows *sql.Rows
-       var err error
-       if groupIDStr != "" {
-	       groupID, _ := strconv.ParseInt(groupIDStr, 10, 64)
-	       rows, err = h.DB.Query(
-		       `SELECT id, group_id, sender_id, content, image_url, created_at FROM group_messages WHERE group_id = ? AND content LIKE ? ORDER BY created_at ASC`,
-		       groupID, "%"+query+"%",
-	       )
-	       if err != nil {
-		       http.Error(w, "internal server error", http.StatusInternalServerError)
-		       return
-	       }
-	       defer rows.Close()
-	       var messages []models.GroupMessage
-	       for rows.Next() {
-		       var m models.GroupMessage
-		       rows.Scan(&m.ID, &m.GroupID, &m.SenderID, &m.Content, &m.ImageURL, &m.CreatedAt)
-		       messages = append(messages, m)
-	       }
-	       if messages == nil {
-		       messages = []models.GroupMessage{}
-	       }
-	       w.Header().Set("Content-Type", "application/json")
-	       json.NewEncoder(w).Encode(messages)
-	       return
-       }
-       recipientID, _ := strconv.ParseInt(recipientIDStr, 10, 64)
-       rows, err = h.DB.Query(
-	       `SELECT id, sender_id, recipient_id, content, image_url, created_at FROM messages
+	var err error
+	if groupIDStr != "" {
+		groupID, _ := strconv.ParseInt(groupIDStr, 10, 64)
+		rows, err = h.DB.Query(
+			`SELECT id, group_id, sender_id, content, image_url, created_at FROM group_messages WHERE group_id = ? AND content LIKE ? ORDER BY created_at ASC`,
+			groupID, "%"+query+"%",
+		)
+		if err != nil {
+			http.Error(w, "internal server error", http.StatusInternalServerError)
+			return
+		}
+		defer rows.Close()
+		var messages []models.GroupMessage
+		for rows.Next() {
+			var m models.GroupMessage
+			rows.Scan(&m.ID, &m.GroupID, &m.SenderID, &m.Content, &m.ImageURL, &m.CreatedAt)
+			messages = append(messages, m)
+		}
+		if messages == nil {
+			messages = []models.GroupMessage{}
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(messages)
+		return
+	}
+	recipientID, _ := strconv.ParseInt(recipientIDStr, 10, 64)
+	rows, err = h.DB.Query(
+		`SELECT id, sender_id, recipient_id, content, image_url, created_at FROM messages
 		WHERE ((sender_id = ? AND recipient_id = ?) OR (sender_id = ? AND recipient_id = ?))
 		AND content LIKE ? ORDER BY created_at ASC`,
-	       senderID, recipientID, recipientID, senderID, "%"+query+"%",
-       )
-       if err != nil {
-	       http.Error(w, "internal server error", http.StatusInternalServerError)
-	       return
-       }
-       defer rows.Close()
-       var messages []models.Message
-       for rows.Next() {
-	       var m models.Message
-	       rows.Scan(&m.ID, &m.SenderID, &m.RecipientID, &m.Content, &m.ImageURL, &m.CreatedAt)
-	       messages = append(messages, m)
-       }
-       if messages == nil {
-	       messages = []models.Message{}
-       }
-       w.Header().Set("Content-Type", "application/json")
-       json.NewEncoder(w).Encode(messages)
+		senderID, recipientID, recipientID, senderID, "%"+query+"%",
+	)
+	if err != nil {
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+	var messages []models.Message
+	for rows.Next() {
+		var m models.Message
+		rows.Scan(&m.ID, &m.SenderID, &m.RecipientID, &m.Content, &m.ImageURL, &m.CreatedAt)
+		messages = append(messages, m)
+	}
+	if messages == nil {
+		messages = []models.Message{}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(messages)
 }
 
 func NewChatHandler(db *sqlite.DB, hub *ws.Hub) *ChatHandler {
@@ -216,6 +216,26 @@ func (h *ChatHandler) EditMessage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid id", http.StatusBadRequest)
 		return
 	}
+	// Forbid editing deleted messages and check time limit
+	var deleted bool
+	var createdAt time.Time
+	err = h.DB.QueryRow(`SELECT deleted, created_at FROM messages WHERE id=? AND sender_id=?`, msgID, senderID).Scan(&deleted, &createdAt)
+	if err == sql.ErrNoRows {
+		http.Error(w, "not found or forbidden", http.StatusForbidden)
+		return
+	} else if err != nil {
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+	if deleted {
+		http.Error(w, "message deleted", http.StatusForbidden)
+		return
+	}
+	// 10-minute edit window
+	if time.Since(createdAt) > 10*time.Minute {
+		http.Error(w, "edit time expired", http.StatusForbidden)
+		return
+	}
 	var req struct {
 		Content  string `json:"content"`
 		ImageURL string `json:"image_url"`
@@ -246,14 +266,31 @@ func (h *ChatHandler) DeleteMessage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid id", http.StatusBadRequest)
 		return
 	}
-	res, err := h.DB.Exec(`DELETE FROM messages WHERE id=? AND sender_id=?`, msgID, senderID)
-	if err != nil {
+	// Перевірити статус viewed
+	var viewed, deleted bool
+	err = h.DB.QueryRow(`SELECT viewed, deleted FROM messages WHERE id=? AND sender_id=?`, msgID, senderID).Scan(&viewed, &deleted)
+	if err == sql.ErrNoRows {
+		http.Error(w, "not found or forbidden", http.StatusForbidden)
+		return
+	} else if err != nil {
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
-	n, _ := res.RowsAffected()
-	if n == 0 {
-		http.Error(w, "not found or forbidden", http.StatusForbidden)
+	if deleted {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	// Додаємо підтримку повного видалення через query-параметр
+	fullDelete := r.URL.Query().Get("full_delete") == "true"
+	if !viewed || fullDelete {
+		// Повністю видалити
+		_, err = h.DB.Exec(`DELETE FROM messages WHERE id=? AND sender_id=?`, msgID, senderID)
+	} else {
+		// Позначити як видалене, очистити контент
+		_, err = h.DB.Exec(`UPDATE messages SET deleted=1, content='Повідомлення видалене', image_url='', edited_at=CURRENT_TIMESTAMP WHERE id=? AND sender_id=?`, msgID, senderID)
+	}
+	if err != nil {
+		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -266,6 +303,26 @@ func (h *ChatHandler) EditGroupMessage(w http.ResponseWriter, r *http.Request) {
 	msgID, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+	// Forbid editing deleted messages and check time limit
+	var deleted bool
+	var createdAt time.Time
+	err = h.DB.QueryRow(`SELECT deleted, created_at FROM group_messages WHERE id=? AND sender_id=?`, msgID, senderID).Scan(&deleted, &createdAt)
+	if err == sql.ErrNoRows {
+		http.Error(w, "not found or forbidden", http.StatusForbidden)
+		return
+	} else if err != nil {
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+	if deleted {
+		http.Error(w, "message deleted", http.StatusForbidden)
+		return
+	}
+	// 10-minute edit window
+	if time.Since(createdAt) > 10*time.Minute {
+		http.Error(w, "edit time expired", http.StatusForbidden)
 		return
 	}
 	var req struct {
@@ -298,14 +355,28 @@ func (h *ChatHandler) DeleteGroupMessage(w http.ResponseWriter, r *http.Request)
 		http.Error(w, "invalid id", http.StatusBadRequest)
 		return
 	}
-	res, err := h.DB.Exec(`DELETE FROM group_messages WHERE id=? AND sender_id=?`, msgID, senderID)
-	if err != nil {
+	var viewed, deleted bool
+	err = h.DB.QueryRow(`SELECT viewed, deleted FROM group_messages WHERE id=? AND sender_id=?`, msgID, senderID).Scan(&viewed, &deleted)
+	if err == sql.ErrNoRows {
+		http.Error(w, "not found or forbidden", http.StatusForbidden)
+		return
+	} else if err != nil {
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
-	n, _ := res.RowsAffected()
-	if n == 0 {
-		http.Error(w, "not found or forbidden", http.StatusForbidden)
+	if deleted {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	// Додаємо підтримку повного видалення через query-параметр
+	fullDelete := r.URL.Query().Get("full_delete") == "true"
+	if !viewed || fullDelete {
+		_, err = h.DB.Exec(`DELETE FROM group_messages WHERE id=? AND sender_id=?`, msgID, senderID)
+	} else {
+		_, err = h.DB.Exec(`UPDATE group_messages SET deleted=1, content='Повідомлення видалене', image_url='', edited_at=CURRENT_TIMESTAMP WHERE id=? AND sender_id=?`, msgID, senderID)
+	}
+	if err != nil {
+		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -316,9 +387,9 @@ func (h *ChatHandler) GetMessages(w http.ResponseWriter, r *http.Request) {
 	senderID := middleware.GetUserID(r)
 	recipientID, _ := strconv.ParseInt(r.URL.Query().Get("recipient_id"), 10, 64)
 	rows, err := h.DB.Query(
-		`SELECT id, sender_id, recipient_id, content, image_url, created_at FROM messages
-		 WHERE (sender_id = ? AND recipient_id = ?) OR (sender_id = ? AND recipient_id = ?)
-		 ORDER BY created_at ASC`, senderID, recipientID, recipientID, senderID,
+		`SELECT id, sender_id, recipient_id, content, image_url, created_at, deleted, edited_at, viewed FROM messages
+			WHERE (sender_id = ? AND recipient_id = ?) OR (sender_id = ? AND recipient_id = ?)
+			ORDER BY created_at ASC`, senderID, recipientID, recipientID, senderID,
 	)
 	if err != nil {
 		http.Error(w, "internal server error", http.StatusInternalServerError)
@@ -326,16 +397,39 @@ func (h *ChatHandler) GetMessages(w http.ResponseWriter, r *http.Request) {
 	}
 	defer rows.Close()
 	var messages []models.Message
+	type messageWithEdited struct {
+		models.Message
+		IsEdited bool `json:"is_edited"`
+	}
 	for rows.Next() {
 		var m models.Message
-		rows.Scan(&m.ID, &m.SenderID, &m.RecipientID, &m.Content, &m.ImageURL, &m.CreatedAt)
+		var deleted bool
+		var editedAt sql.NullTime
+		var viewed bool
+		rows.Scan(&m.ID, &m.SenderID, &m.RecipientID, &m.Content, &m.ImageURL, &m.CreatedAt, &deleted, &editedAt, &viewed)
+		m.Deleted = deleted
+		m.Viewed = viewed
+		isEdited := false
+		if editedAt.Valid {
+			m.EditedAt = &editedAt.Time
+			isEdited = true
+		}
+		if deleted {
+			m.Content = "Повідомлення видалене"
+			m.ImageURL = ""
+		}
 		messages = append(messages, m)
 	}
-	if messages == nil {
-		messages = []models.Message{}
+	// Формуємо новий масив з міткою is_edited
+	var out []messageWithEdited
+	for _, m := range messages {
+		out = append(out, messageWithEdited{Message: m, IsEdited: m.EditedAt != nil})
+	}
+	if out == nil {
+		out = []messageWithEdited{}
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(messages)
+	json.NewEncoder(w).Encode(out)
 }
 
 // POST /api/messages  body: {"recipient_id":2,"content":"hi"}
@@ -470,7 +564,7 @@ func (h *ChatHandler) GetGroupMessages(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	rows, err := h.DB.Query(
-		`SELECT id, group_id, sender_id, content, image_url, created_at FROM group_messages WHERE group_id = ? ORDER BY created_at ASC`,
+		`SELECT id, group_id, sender_id, content, image_url, created_at, deleted, edited_at, viewed FROM group_messages WHERE group_id = ? ORDER BY created_at ASC`,
 		groupID,
 	)
 	if err != nil {
@@ -479,14 +573,37 @@ func (h *ChatHandler) GetGroupMessages(w http.ResponseWriter, r *http.Request) {
 	}
 	defer rows.Close()
 	var messages []models.GroupMessage
+	type groupMessageWithEdited struct {
+		models.GroupMessage
+		IsEdited bool `json:"is_edited"`
+	}
 	for rows.Next() {
 		var m models.GroupMessage
-		rows.Scan(&m.ID, &m.GroupID, &m.SenderID, &m.Content, &m.ImageURL, &m.CreatedAt)
+		var deleted bool
+		var editedAt sql.NullTime
+		var viewed bool
+		rows.Scan(&m.ID, &m.GroupID, &m.SenderID, &m.Content, &m.ImageURL, &m.CreatedAt, &deleted, &editedAt, &viewed)
+		m.Deleted = deleted
+		m.Viewed = viewed
+		isEdited := false
+		if editedAt.Valid {
+			m.EditedAt = &editedAt.Time
+			isEdited = true
+		}
+		if deleted {
+			m.Content = "Повідомлення видалене"
+			m.ImageURL = ""
+		}
 		messages = append(messages, m)
 	}
-	if messages == nil {
-		messages = []models.GroupMessage{}
+	// Формуємо новий масив з міткою is_edited
+	var out []groupMessageWithEdited
+	for _, m := range messages {
+		out = append(out, groupMessageWithEdited{GroupMessage: m, IsEdited: m.EditedAt != nil})
+	}
+	if out == nil {
+		out = []groupMessageWithEdited{}
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(messages)
+	json.NewEncoder(w).Encode(out)
 }
