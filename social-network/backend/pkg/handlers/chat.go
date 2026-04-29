@@ -409,10 +409,8 @@ func (h *ChatHandler) GetMessages(w http.ResponseWriter, r *http.Request) {
 		rows.Scan(&m.ID, &m.SenderID, &m.RecipientID, &m.Content, &m.ImageURL, &m.CreatedAt, &deleted, &editedAt, &viewed)
 		m.Deleted = deleted
 		m.Viewed = viewed
-		isEdited := false
 		if editedAt.Valid {
 			m.EditedAt = &editedAt.Time
-			isEdited = true
 		}
 		if deleted {
 			m.Content = "Повідомлення видалене"

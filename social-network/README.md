@@ -65,6 +65,8 @@ A full-stack social network application with real-time chat, groups, events, and
     - if a message is viewed, it is replaced with a placeholder ("Message deleted")
     - edited messages are marked as "edited"
     - all edit/delete actions are available only to the author
+    - editing is allowed only within 10 minutes after sending
+    - all UI and system messages are in English
 - **Notifications** — follow requests, group invitations, event updates — all delivered in real time
 - **Online Presence** — see which users are currently online (with client type: web / desktop)
 - **File & Image Uploads** — upload and serve profile avatars, post images, and chat files (documents, images, video, audio, voice messages)
