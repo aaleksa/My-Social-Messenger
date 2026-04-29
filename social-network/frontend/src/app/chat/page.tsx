@@ -1,3 +1,5 @@
+type Contact = { id: number; type: "user" | "group"; name: string };
+type GroupMember = { user_id: number; first_name: string; last_name: string; avatar: string };
 "use client";
 import { useEffect, useRef, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
@@ -15,8 +17,6 @@ type Message = {
   is_edited?: boolean;
   deleted?: boolean;
 };
-type Contact = { id: number; type: "user" | "group"; name: string };
-type GroupMember = { user_id: number; first_name: string; last_name: string; avatar: string };
 
 const EMOJIS = [
   "\uD83D\uDE00","\uD83D\uDE02","\uD83D\uDE04","\uD83D\uDE06","\uD83D\uDE09","\uD83D\uDE0D","\uD83D\uDE18","\uD83D\uDE1C",
@@ -30,10 +30,10 @@ export default function ChatPage() {
     <Suspense fallback={null}>
       <ChatPageInner />
     </Suspense>
-  );
+  )
 }
 
-function ChatPageInner() {
+function ChatPageInner(): JSX.Element {
   // Selected contact state must be first
   const [selected, setSelected] = useState<Contact | null>(null);
   // Pinned messages state
@@ -42,7 +42,10 @@ function ChatPageInner() {
 
   // Load pinned messages when selected changes
   useEffect(() => {
-    if (!selected) return setPinnedIds([]);
+    if (!selected) {
+      setPinnedIds([]);
+      return;
+    }
     if (selected.type === "user") {
       api.listPinnedMessages(selected.id, undefined).then(setPinnedIds).catch(() => setPinnedIds([]));
     } else {
@@ -76,7 +79,8 @@ function ChatPageInner() {
   const [forwardingMsg, setForwardingMsg] = useState<{id: number, isGroup: boolean}|null>(null);
   const [showForwardModal, setShowForwardModal] = useState(false);
   // ...existing state...
-  const [reactions, setReactions] = useState<Record<number, { [emoji: string]: number; mine: string[] }>>({});
+  // Separate mine from emoji counts for correct typing
+  const [reactions, setReactions] = useState<Record<number, { counts: Record<string, number>; mine: string[] }>>({});
   const [me, setMe] = useState<any>(null);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const searchParams = useSearchParams();
@@ -102,116 +106,17 @@ function ChatPageInner() {
 
   // Load contacts on mount
   useEffect(() => {
-    api.getMe()
-      .then(async (u) => {
-        setMe(u);
-        const [allUsers, groups] = await Promise.all([
-          api.listUsers().catch(() => []),
-              {messages.map((m, i) => {
-                const isMine = me && m.sender_id === me.id;
-                const isGroup = selected?.type === "group";
-                const sender = isGroup && !isMine ? groupMembers[m.sender_id] : null;
-                return (
-                  <div key={m.id ?? i} style={{ display: "flex", flexDirection: isMine ? "row-reverse" : "row", alignItems: "flex-end", gap: 8, position: "relative" }}>
-                    {isGroup && !isMine && (
-                      <div style={{ width: 30, height: 30, borderRadius: "50%", background: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 700, fontSize: 13, flexShrink: 0 }}>
-                        {sender ? (sender.first_name[0] || "?").toUpperCase() : "?"}
-                      </div>
-                    )}
-                    <div style={{ maxWidth: "65%" }}>
-                      {isGroup && !isMine && sender && (
-                        <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 2, color: "var(--text-muted)", paddingLeft: 4 }}>
-                          {sender.first_name} {sender.last_name}
-                        </div>
-                      )}
-                      <div style={{
-                        padding: "0.55rem 0.9rem",
-                        borderRadius: isMine ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
-                        background: isMine ? "var(--accent)" : "var(--bg-input)",
-                        color: isMine ? "#fff" : "var(--text)",
-                        fontSize: 14, lineHeight: 1.45, wordBreak: "break-word",
-                        position: "relative"
-                      }}>
-                        {editingId === m.id ? (
-                          <form onSubmit={async e => {
-                            e.preventDefault();
-                            if (!editText.trim()) return;
-                            try {
-                              if (isGroup) {
-                                await api.editGroupMessage(m.id!, editText);
-                              } else {
-                                await api.editMessage(m.id!, editText);
-                              }
-                              setMessages(msgs => msgs.map(msg => msg.id === m.id ? { ...msg, content: editText } : msg));
-                              setEditingId(null);
-                            } catch (err: any) {
-                              alert(err?.message || "Failed to edit message");
-                            }
-                          }} style={{ display: "flex", gap: 4 }}>
-                            <input value={editText} onChange={e => setEditText(e.target.value)} style={{ flex: 1, borderRadius: 6, border: "1px solid #ccc", padding: "2px 6px" }} autoFocus />
-                            <button type="submit">💾</button>
-                            <button type="button" onClick={() => setEditingId(null)}>✖</button>
-                          </form>
-                        ) : (
-                          <>
-                            {/* Deleted message stub */}
-                            {(m.deleted || m.content === "Повідомлення видалене" || m.content === "Message deleted") ? (
-                              <span style={{ color: '#888', fontStyle: 'italic' }}>Message deleted</span>
-                            ) : (
-                              <>
-                                {(() => {
-                                  // Render file links/images if present
-                                  const parts = (m.content || "").split(/\n/);
-                                  return parts.map((part, idx) => {
-                                    // Detect file meta: url|type|name
-                                    const fileMatch = part.match(/^(\/uploads\/[^|]+)\|([^|]+)\|(.+)$/);
-                                    if (fileMatch) {
-                                      const [_, url, type, name] = fileMatch;
-                                      if (type.startsWith('image/')) {
-                                        return <img key={idx} src={url} alt={name} style={{ maxWidth: 180, maxHeight: 180, borderRadius: 8, margin: "4px 0" }} />;
-                                      } else if (type.startsWith('audio/')) {
-                                        return <audio key={idx} src={url} controls style={{ display: 'block', margin: '6px 0', maxWidth: 220 }} />;
-                                      } else if (type.startsWith('video/')) {
-                                        return <video key={idx} src={url} controls style={{ display: 'block', margin: '6px 0', maxWidth: 220 }} />;
-                                      } else {
-                                        return <a key={idx} href={url} download={name} style={{ color: isMine ? "#fff" : "var(--accent)", wordBreak: "break-all" }}>📎 {name}</a>;
-                                      }
-                                    } else if (/^https?:\/\/.+\.(jpg|jpeg|png|gif|webp)$/i.test(part.trim())) {
-                                      return <img key={idx} src={part.trim()} alt="file" style={{ maxWidth: 180, maxHeight: 180, borderRadius: 8, margin: "4px 0" }} />;
-                                    } else if (/^https?:\/.*/.test(part.trim())) {
-                                      return <a key={idx} href={part.trim()} target="_blank" rel="noopener noreferrer" style={{ color: isMine ? "#fff" : "var(--accent)", wordBreak: "break-all" }}>{part.trim()}</a>;
-                                    } else if (part.trim().length > 0) {
-                                      return <span key={idx}>{part}</span>;
-                                    } else {
-                                      return <br key={idx} />;
-                                    }
-                                  });
-                                })()}
-                                {/* Edited label */}
-                                {m.is_edited && !m.deleted && m.content !== "Повідомлення видалене" && m.content !== "Message deleted" && (
-                                  <span style={{ fontSize: 11, color: '#aaa', marginLeft: 6 }}>(edited)</span>
-                                )}
-                              </>
-                            )}
-                            <div style={{ fontSize: 10, opacity: .65, marginTop: "0.2rem", textAlign: isMine ? "right" : "left" }}>
-                              {new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                            </div>
-    const sel = selectedRef.current;
-    if (!sel) return;
-    if (
-      lastMessage.type === "chat_message" &&
-      sel.type === "user" &&
-      (lastMessage.sender_id === sel.id || lastMessage.recipient_id === sel.id)
-    ) {
-      setMessages(prev => [...prev, {
-        sender_id: lastMessage.sender_id ?? 0,
-        recipient_id: lastMessage.recipient_id,
-        content: lastMessage.content,
-        created_at: lastMessage.created_at,
-      }]);
-    }
-  }, [lastMessage]);
+    api.getMe().then(async (u) => {
+      setMe(u);
+      const users = await api.listUsers();
+      setContacts(users);
+      if (preselectedUserId && users.some((u: any) => u.id === preselectedUserId)) {
+        setSelected({ id: preselectedUserId, type: "user", name: users.find((u: any) => u.id === preselectedUserId)?.name || "" });
+      }
+    });
+  }, [preselectedUserId]);
 
+  // Scroll to bottom on new messages
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -238,7 +143,8 @@ function ChatPageInner() {
         return;
       }
       setUploading(false);
-    } else if (audioBlob) {
+    }
+    if (audioBlob) {
       setUploading(true);
       try {
         const audioFile = new File([audioBlob], `voice-${Date.now()}.ogg`, { type: 'audio/ogg' });
@@ -498,7 +404,7 @@ function ChatPageInner() {
                             </div>
                             {/* Emoji reactions UI */}
                             <div style={{ display: "flex", gap: 4, marginTop: 2, flexWrap: "wrap" }}>
-                              {Object.entries(reactions[m.id!] || {}).filter(([k]) => k !== "mine").map(([emoji, count]) => (
+                              {Object.entries((reactions[m.id!] && reactions[m.id!].counts) ? reactions[m.id!].counts : {}).map(([emoji, count]) => (
                                 <button
                                   key={emoji}
                                   style={{ border: "none", background: "#eee", borderRadius: 8, padding: "2px 7px", fontSize: 15, cursor: "pointer", opacity: (reactions[m.id!]?.mine || []).includes(emoji) ? 1 : 0.7 }}
@@ -515,7 +421,7 @@ function ChatPageInner() {
                                       let r: any = {};
                                       if (isGroup) r = await api.request(`/api/messages/group/${m.id}/reactions`);
                                       else r = await api.request(`/api/messages/${m.id}/reactions`);
-                                      setReactions(prev => ({ ...prev, [m.id!]: { ...r.counts, mine: r.mine || [] } }));
+                                      setReactions(prev => ({ ...prev, [m.id!]: { counts: r.counts || {}, mine: r.mine || [] } }));
                                     } catch {}
                                   }}
                                 >{emoji} {count}</button>
@@ -548,7 +454,7 @@ function ChatPageInner() {
                                           let r: any = {};
                                           if (isGroup) r = await api.request(`/api/messages/group/${m.id}/reactions`);
                                           else r = await api.request(`/api/messages/${m.id}/reactions`);
-                                          setReactions(prev => ({ ...prev, [m.id!]: { ...r.counts, mine: r.mine || [] } }));
+                                          setReactions(prev => ({ ...prev, [m.id!]: { counts: r.counts || {}, mine: r.mine || [] } }));
                                         } catch {}
                                         document.body.removeChild(menu);
                                       };
@@ -805,5 +711,5 @@ function ChatPageInner() {
         </div>
       </main>
     </div>
-  );
+  )
 }

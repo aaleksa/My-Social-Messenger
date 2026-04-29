@@ -1,5 +1,5 @@
 'use strict';
-const API    = 'http://localhost:8081';
+const API    = 'http://localhost:8080';
 const WS_URL = 'ws://localhost:8081/api/ws';
 
 let me = null, tok = localStorage.getItem('sn_tok')||'';

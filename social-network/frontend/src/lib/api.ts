@@ -1,5 +1,5 @@
 
-const API_BASE = "";
+const API_BASE = "http://localhost:8080";
 
 async function request(path: string, options?: RequestInit) {
   const res = await fetch(`${API_BASE}${path}`, {
@@ -26,6 +26,24 @@ async function request(path: string, options?: RequestInit) {
 }
 
 export const api = {
+      uploadImage: async (file: File) => {
+        const res = await api.uploadFile(file);
+        return res.url;
+      },
+    // --- Stubs for chat features (for TS compatibility, implement as needed) ---
+    searchMessages: (recipientId: number, query: string) => Promise.resolve([]),
+    searchGroupMessages: (groupId: number, query: string) => Promise.resolve([]),
+    editMessage: (id: number, content: string) => Promise.resolve({}),
+    editGroupMessage: (id: number, content: string) => Promise.resolve({}),
+    deleteMessage: (id: number) => Promise.resolve({}),
+    deleteGroupMessage: (id: number) => Promise.resolve({}),
+    reactMessage: (id: number, emoji: string) => Promise.resolve({}),
+    reactGroupMessage: (id: number, emoji: string) => Promise.resolve({}),
+    unreactMessage: (id: number, emoji: string) => Promise.resolve({}),
+    unreactGroupMessage: (id: number, emoji: string) => Promise.resolve({}),
+    forwardMessage: (id: number, toUserId: number) => Promise.resolve({}),
+    forwardGroupMessage: (id: number, toGroupId: number) => Promise.resolve({}),
+    request: (path: string) => Promise.resolve({ counts: {}, mine: [] }),
   // Auth
   register: (data: object) => request("/api/auth/register", { method: "POST", body: JSON.stringify(data) }),
   login: (data: object) => request("/api/auth/login", { method: "POST", body: JSON.stringify(data) }),

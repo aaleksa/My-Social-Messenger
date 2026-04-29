@@ -8,10 +8,7 @@ import Sidebar from "@/components/Sidebar";
 import { useParams } from "next/navigation";
 import dynamic from "next/dynamic";
 
-type Group = { id: number; creator_id: number; title: string; description: string; created_at: string; my_status: string; member_count: number };
-type GroupEvent = { id: number; group_id: number; creator_id: number; title: string; description: string; event_time: string; created_at: string; user_response?: string; going_count: number; not_going_count: number };
-type Member = { user_id: number; status: string; first_name: string; last_name: string; avatar: string };
-type User = { id: number; first_name: string; last_name: string; avatar: string };
+
 const GroupCall = dynamic(() => import("./GroupCall"), { ssr: false });
 
 type Group = { id: number; creator_id: number; title: string; description: string; created_at: string; my_status: string; member_count: number };
@@ -20,6 +17,24 @@ type Member = { user_id: number; status: string; first_name: string; last_name: 
 type User = { id: number; first_name: string; last_name: string; avatar: string };
 
 export default function GroupPage() {
+      async function handleEditEvent(e: React.FormEvent) {
+        e.preventDefault();
+        if (!editEvent || !editEvent.title.trim() || eventBusy) return;
+        setEventBusy(true);
+        try {
+          await api.updateEvent(editEvent);
+          setEditEvent(null);
+          api.listEvents(gid).then(ev => setEvents(ev || []));
+        } catch {}
+        setEventBusy(false);
+      }
+    // Стан для редагування події
+    const [editEvent, setEditEvent] = useState<GroupEvent | null>(null);
+
+    // Відкрити модалку редагування події
+    function openEditModal(ev: GroupEvent) {
+      setEditEvent(ev);
+    }
   // Group call state (must be inside component)
   const [callOpen, setCallOpen] = useState(false);
   const [callMessages, setCallMessages] = useState<any[]>([]);
@@ -472,8 +487,8 @@ export default function GroupPage() {
                                       />
                                       <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
                                         <button type="button" onClick={() => setEditEvent(null)} style={{ flex: 1, background: "#eee", color: "#333", border: "none", borderRadius: "var(--radius)", padding: "0.5rem 1.25rem", fontWeight: 500, fontSize: 14, cursor: "pointer" }}>Cancel</button>
-                                        <button type="submit" disabled={!editEvent.title.trim() || !editEvent.event_time || editBusy} style={{ flex: 1, background: "var(--accent)", color: "#fff", border: "none", borderRadius: "var(--radius)", padding: "0.5rem 1.25rem", fontWeight: 600, fontSize: 14, opacity: editBusy ? 0.6 : 1, cursor: editBusy ? "not-allowed" : "pointer" }}>
-                                          {editBusy ? "Saving..." : "Save Changes"}
+                                        <button type="submit" disabled={!editEvent.title.trim() || !editEvent.event_time || eventBusy} style={{ flex: 1, background: "var(--accent)", color: "#fff", border: "none", borderRadius: "var(--radius)", padding: "0.5rem 1.25rem", fontWeight: 600, fontSize: 14, opacity: eventBusy ? 0.6 : 1, cursor: eventBusy ? "not-allowed" : "pointer" }}>
+                                          {eventBusy ? "Saving..." : "Save Changes"}
                                         </button>
                                       </div>
                                     </form>

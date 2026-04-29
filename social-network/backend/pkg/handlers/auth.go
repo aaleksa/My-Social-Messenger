@@ -70,13 +70,15 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.SetCookie(w, &http.Cookie{
-		Name:     "session_id",
-		Value:    session.ID,
-		Expires:  session.ExpiresAt,
-		HttpOnly: true,
-		Path:     "/",
-	})
+	       http.SetCookie(w, &http.Cookie{
+		       Name:     "session_id",
+		       Value:    session.ID,
+		       Expires:  session.ExpiresAt,
+		       HttpOnly: true,
+		       Path:     "/",
+		       SameSite: http.SameSiteLaxMode,
+		       Secure:   false,
+	       })
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
@@ -119,13 +121,15 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.SetCookie(w, &http.Cookie{
-		Name:     "session_id",
-		Value:    session.ID,
-		Expires:  session.ExpiresAt,
-		HttpOnly: true,
-		Path:     "/",
-	})
+	       http.SetCookie(w, &http.Cookie{
+		       Name:     "session_id",
+		       Value:    session.ID,
+		       Expires:  session.ExpiresAt,
+		       HttpOnly: true,
+		       Path:     "/",
+		       SameSite: http.SameSiteLaxMode,
+		       Secure:   false,
+	       })
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{"user_id": user.ID, "session_id": session.ID})
@@ -144,13 +148,15 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 
 	h.DB.Exec(`DELETE FROM sessions WHERE id = ?`, sessionID)
 
-	http.SetCookie(w, &http.Cookie{
-		Name:     "session_id",
-		Value:    "",
-		Expires:  time.Unix(0, 0),
-		HttpOnly: true,
-		Path:     "/",
-	})
+	       http.SetCookie(w, &http.Cookie{
+		       Name:     "session_id",
+		       Value:    "",
+		       Expires:  time.Unix(0, 0),
+		       HttpOnly: true,
+		       Path:     "/",
+		       SameSite: http.SameSiteLaxMode,
+		       Secure:   false,
+	       })
 
 	w.WriteHeader(http.StatusOK)
 }

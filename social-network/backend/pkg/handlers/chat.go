@@ -18,8 +18,6 @@ type ChatHandler struct {
 	Hub *ws.Hub
 }
 
-// ...existing methods...
-
 // GET /api/messages/search?recipient_id=X&query=Y
 func (h *ChatHandler) SearchMessages(w http.ResponseWriter, r *http.Request) {
 	senderID := middleware.GetUserID(r)
@@ -583,10 +581,8 @@ func (h *ChatHandler) GetGroupMessages(w http.ResponseWriter, r *http.Request) {
 		rows.Scan(&m.ID, &m.GroupID, &m.SenderID, &m.Content, &m.ImageURL, &m.CreatedAt, &deleted, &editedAt, &viewed)
 		m.Deleted = deleted
 		m.Viewed = viewed
-		isEdited := false
 		if editedAt.Valid {
 			m.EditedAt = &editedAt.Time
-			isEdited = true
 		}
 		if deleted {
 			m.Content = "Повідомлення видалене"

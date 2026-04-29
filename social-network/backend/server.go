@@ -22,6 +22,10 @@ func getEnv(key, fallback string) string {
 }
 
 func main() {
+	// Register emoji reaction user list endpoints
+	// ...existing code...
+
+	// Register emoji reaction user list endpoints after mux, protected, and chatHandler are defined
 	dbPath := getEnv("DB_PATH", "./social_network.db")
 	migrationsPath := getEnv("MIGRATIONS_PATH", "pkg/db/migrations/sqlite")
 	port := getEnv("PORT", defaultPort)

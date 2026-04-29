@@ -7,7 +7,7 @@ services:
     ports:
       - "8081:8080"
     volumes:
-      - db_data:/app/data
+      - ./backend/data:/app/data
       - uploads_data:/app/uploads
     environment:
       - DB_PATH=/app/data/social_network.db

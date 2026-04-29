@@ -79,8 +79,109 @@ function appendMsg(msg,scroll=true){
   const area=document.getElementById('msgs');if(!area)return;
   const isMine=msg.sender_id===me.id;
   const au=isMine?null:users.find(u=>u.id===msg.sender_id);
+
+  // --- Emoji reactions ---
+  const EMOJIS = ["👍","❤️","😂","😮","😢","👎","😀","😍","😆","😡","🎉","🙏","🔥","👏","😱","😅"];
+  const reactDiv = document.createElement('div');
+  reactDiv.className = 'msg-reactions';
+  reactDiv.style.display = 'flex';
+  reactDiv.style.gap = '4px';
+  reactDiv.style.marginTop = '2px';
+  // Render reactions
+  const reactions = msg.reactions || {};
+  EMOJIS.forEach(emoji => {
+    const count = reactions[emoji] || 0;
+    if (count > 0 || (msg.my_reaction === emoji)) {
+      const btn = document.createElement('button');
+      btn.textContent = emoji + (count > 0 ? ' ' + count : '');
+      btn.style.border = 'none';
+      btn.style.background = '#eee';
+      btn.style.borderRadius = '8px';
+      btn.style.padding = '2px 7px';
+      btn.style.fontSize = '15px';
+      btn.style.cursor = 'pointer';
+      btn.style.opacity = (msg.my_reaction === emoji) ? '1' : '0.7';
+      btn.onclick = async (e) => {
+        e.stopPropagation();
+        // Show popup with users for this emoji
+        const popup = document.createElement('div');
+        popup.style.position = 'absolute';
+        popup.style.background = '#fff';
+        popup.style.border = '1px solid #ccc';
+        popup.style.borderRadius = '8px';
+        popup.style.padding = '8px';
+        popup.style.zIndex = '9999';
+        popup.style.fontSize = '14px';
+        popup.textContent = 'Loading...';
+        document.body.appendChild(popup);
+        const rect = btn.getBoundingClientRect();
+        popup.style.left = rect.left + 'px';
+        popup.style.top = (rect.bottom + window.scrollY) + 'px';
+        try {
+          const users = await api(`/api/messages/${msg.id}/reactions?emoji=${encodeURIComponent(emoji)}`);
+          popup.innerHTML = `<b>${emoji}</b> reacted:<br>` + users.map(u => esc(dname(u))).join('<br>');
+        } catch { popup.textContent = 'Failed to load'; }
+        setTimeout(() => {
+          document.addEventListener('click', function handler(ev){
+            if (!popup.contains(ev.target)) { popup.remove(); document.removeEventListener('click', handler); }
+          });
+        }, 50);
+      };
+      reactDiv.appendChild(btn);
+    }
+  });
+  // Add + button for new reaction
+  const addBtn = document.createElement('button');
+  addBtn.textContent = '➕';
+  addBtn.style.border = 'none';
+  addBtn.style.background = '#eee';
+  addBtn.style.borderRadius = '8px';
+  addBtn.style.padding = '2px 7px';
+  addBtn.style.fontSize = '15px';
+  addBtn.style.cursor = 'pointer';
+  addBtn.onclick = (e) => {
+    e.stopPropagation();
+    const menu = document.createElement('div');
+    menu.style.position = 'absolute';
+    menu.style.background = '#fff';
+    menu.style.border = '1px solid #ccc';
+    menu.style.borderRadius = '8px';
+    menu.style.padding = '4px';
+    menu.style.zIndex = '9999';
+    menu.style.display = 'grid';
+    menu.style.gridTemplateColumns = 'repeat(8,1fr)';
+    menu.style.gap = '2px';
+    EMOJIS.forEach(em => {
+      const btn2 = document.createElement('button');
+      btn2.textContent = em;
+      btn2.style.fontSize = '18px';
+      btn2.style.background = 'none';
+      btn2.style.border = 'none';
+      btn2.style.cursor = 'pointer';
+      btn2.onclick = async () => {
+        try {
+          await api(`/api/messages/${msg.id}/react`, {method:'POST', body:JSON.stringify({emoji: em})});
+          // Optionally reload message reactions here
+        } catch {}
+        document.body.removeChild(menu);
+      };
+      menu.appendChild(btn2);
+    });
+    const rect = addBtn.getBoundingClientRect();
+    menu.style.left = rect.left + 'px';
+    menu.style.top = (rect.bottom + window.scrollY) + 'px';
+    document.body.appendChild(menu);
+    setTimeout(() => {
+      document.addEventListener('click', function handler(ev){
+        if (!menu.contains(ev.target)) { menu.remove(); document.removeEventListener('click', handler); }
+      });
+    }, 50);
+  };
+  reactDiv.appendChild(addBtn);
+
   const row=document.createElement('div');row.className='mr '+(isMine?'mine':'theirs');
   row.innerHTML=`<div>${(!isMine&&au)?`<div style="font-size:11px;color:var(--text-dim);margin-bottom:1px">${esc(dname(au))}</div>`:''}<div class="mb">${esc(msg.content)}</div><div class="mt">${fmt(msg.created_at)}</div></div>`;
+  row.appendChild(reactDiv);
   area.appendChild(row);if(scroll)scrollMsgs();
 }
 function scrollMsgs(){const el=document.getElementById('msgs');if(el)el.scrollTop=el.scrollHeight;}
