@@ -401,6 +401,11 @@ function ChatPageInner(): JSX.Element {
                             })()}
                             <div style={{ fontSize: 10, opacity: .65, marginTop: "0.2rem", textAlign: isMine ? "right" : "left" }}>
                               {new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                              {m.is_edited && (
+                                <span style={{ marginLeft: 6, fontStyle: "italic", fontSize: 10, color: isMine ? "#fff8" : "#0008" }}>
+                                  (редаговано)
+                                </span>
+                              )}
                             </div>
                             {/* Emoji reactions UI */}
                             <div style={{ display: "flex", gap: 4, marginTop: 2, flexWrap: "wrap" }}>

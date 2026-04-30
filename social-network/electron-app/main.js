@@ -45,8 +45,22 @@ function createWindow() {
 
   const isDev = process.env.ELECTRON_DEV === 'true';
   if (isDev) {
-    mainWindow.loadURL('http://localhost:5173');
-    mainWindow.webContents.openDevTools();
+    // Try to load Vite dev server on 5173, fallback to 5174 if needed
+    const tryPorts = [5173, 5174];
+    (async () => {
+      for (const port of tryPorts) {
+        try {
+          const res = await fetch(`http://localhost:${port}`);
+          if (res.ok) {
+            mainWindow.loadURL(`http://localhost:${port}`);
+            mainWindow.webContents.openDevTools();
+            return;
+          }
+        } catch (e) {}
+      }
+      // If neither port is available, show error page
+      mainWindow.loadURL('data:text/html,<h2>Vite dev server not running on 5173 or 5174</h2>');
+    })();
   } else {
     mainWindow.loadFile(path.join(__dirname, 'renderer', 'dist', 'index.html'));
   }

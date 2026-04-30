@@ -164,20 +164,24 @@ func main() {
 	}))
 
 	mux.Handle("/api/messages", protected(func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case http.MethodGet:
-			chatHandler.GetMessages(w, r)
-		case http.MethodPost:
-			chatHandler.SendMessage(w, r)
-		}
+		       switch r.Method {
+		       case http.MethodGet:
+			       chatHandler.GetMessages(w, r)
+		       case http.MethodPost:
+			       chatHandler.SendMessage(w, r)
+		       case http.MethodDelete:
+			       chatHandler.DeleteMessage(w, r)
+		       }
 	}))
 	mux.Handle("/api/messages/group", protected(func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case http.MethodGet:
-			chatHandler.GetGroupMessages(w, r)
-		case http.MethodPost:
-			chatHandler.SendGroupMessage(w, r)
-		}
+		       switch r.Method {
+		       case http.MethodGet:
+			       chatHandler.GetGroupMessages(w, r)
+		       case http.MethodPost:
+			       chatHandler.SendGroupMessage(w, r)
+		       case http.MethodDelete:
+			       chatHandler.DeleteGroupMessage(w, r)
+		       }
 	}))
 
 	// Pin message endpoints
