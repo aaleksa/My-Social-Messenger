@@ -235,7 +235,7 @@ function ChatPageInner(): JSX.Element {
                   display: "flex", alignItems: "center", justifyContent: "center",
                   color: "#fff", fontWeight: 700, fontSize: 15, flexShrink: 0,
                 }}>
-                  {c.type === "group" ? "👥" : c.name.trim()[0]?.toUpperCase() || "#"}
+                  {c.type === "group" ? "👥" : (typeof c.name === "string" && c.name.trim() ? c.name.trim()[0].toUpperCase() : "#")}
                 </div>
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontWeight: 500, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name}</div>
