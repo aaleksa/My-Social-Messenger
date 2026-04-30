@@ -190,8 +190,21 @@ func (h *GroupHandler) InviteMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err := h.DB.Exec(
-		`INSERT OR IGNORE INTO group_members (group_id, user_id, status, invited_by) VALUES (?, ?, 'invited', ?)`,
+	// Check if user is already invited, accepted, or pending
+	var status string
+	err := h.DB.QueryRow(
+		`SELECT status FROM group_members WHERE group_id = ? AND user_id = ?`,
+		req.GroupID, req.UserID,
+	).Scan(&status)
+
+	if err == nil && (status == "invited" || status == "accepted" || status == "pending") {
+		w.WriteHeader(http.StatusConflict)
+		w.Write([]byte("User already invited or member"))
+		return
+	}
+
+	_, err = h.DB.Exec(
+		`INSERT INTO group_members (group_id, user_id, status, invited_by) VALUES (?, ?, 'invited', ?)`,
 		req.GroupID, req.UserID, inviterID,
 	)
 	if err != nil {
