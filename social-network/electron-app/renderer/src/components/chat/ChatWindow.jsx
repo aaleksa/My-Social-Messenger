@@ -140,6 +140,7 @@ const EMOJIS = [
 ]
 
 export default function ChatWindow() {
+  alert('DEBUG: ChatWindow.jsx is mounted!')
   const { tok, me, users, groups, activeChatID, ws, cachedMsgs, setCachedMsgs, pushMsg, onlineIDs, typingUsers } = useStore()
   const [text, setText] = useState('')
   const [sendErr, setSendErr] = useState('')
@@ -310,6 +311,22 @@ export default function ChatWindow() {
           const repliedMsg = m.reply_to ? msgs.find(msg => msg.id === m.reply_to) : null
           return (
             <div key={i} className={`mr ${mine ? 'mine' : 'theirs'}`}>
+              {/* DEBUG: Show sender_id and me.id for troubleshooting */}
+              <div style={{
+                fontSize: '18px',
+                color: 'red',
+                background: 'yellow',
+                fontWeight: 'bold',
+                padding: '6px 12px',
+                border: '2px solid red',
+                borderRadius: '8px',
+                position: 'absolute',
+                left: 2,
+                top: 2,
+                zIndex: 1000
+              }}>
+                DEBUG: sender_id: {m.sender_id}, me.id: {me?.id}
+              </div>
               <div style={{ position: 'relative' }}>
                 {isEditing ? (
                   <>
